@@ -1,0 +1,60 @@
+# Règles de détection du laboratoire « Forensique réseau ».
+#
+# Pourquoi ces règles existent
+# ----------------------------
+# Les fichiers de règles installs avec Suricata sur cette image ne contiennent que
+# des règles d'événements techniques : erreurs de Décodeur, anomalies de flux,
+# événements des couches applicatives. Elles surveillent la corrections de Suricata,
+# pas l'activité du réseau du laboratoire. Aucune d'elles ne peut donc signaler un
+# balayage de ports, une connexion Telnet en clair ou un flot de paquets ICMP.
+#
+# Le chapitre consacré aux journaux et aux outils d'analyse doit pourtant produire
+# un livrable nommé « alertes-suricata.txt ». Ce fichier est ce qui rend ce livrable
+# possible : il contient des règles écrites pour cet incident, que l'apprenant peut
+# lire, comprendre et modifier.
+#
+# Les règles sont volontairement simples et commentées. Une règle trop complicatee
+# serait indéchiffrable pour un public d'analystes qui découvre Suricata, et une règle
+# importée sans être comprise n'enseigne rien.
+#
+# Convention de numérotation : les identifiants commencent à 9 000 000, plage réservée
+# aux règles du laboratoire, pour ne jamais entrer en collision avec celles de la
+# distribution, qui commencent à 2 000 000.
+
+# --- Balayage de ports ---------------------------------------------------------
+# Un service légitime ne provoque pas cinq SYNs vers des ports inattendus en
+# trente secondes depuis la même adresse. Le seuil est le cœur de la règle : sans
+# lui, une seule connexion vers un port inhabituel déclencherait une alerte, et le
+# moteur deviendrait bruyant au point d'être abandonné.
+#
+# Ce que la règle prouve : une adresse a sondé plusieurs ports inhabituels en peu
+# de temps. Ce qu'elle ne prouve pas : que la sonde a réussi, ni que la cible est
+# vulnérable. La confirmation se fait dans la capture, chapitre sur l'analyse des
+# paquets.
+alert tcp any any -> any [21,25,53,110,139,143,3306,3389,993,995] (msg:"LABO Balayage de ports - port inhabituel sonde"; flow:stateless; flags:S; threshold:type limit, track by_src, count 5, seconds 30; classtype:network-scan; sid:9000001; rev:1;)
+
+# --- Connexion Telnet en clair -------------------------------------------------
+# Le protocole Telnet ne chiffre rien : ni l'identifiant ni le mot de passe ne
+# sont protégés. La présence d'une invite de connexion en clair sur le port 23 est
+# donc en soi l'anomalie. Cette règle ne cherche pas à deviner le couple Trying to
+# crack : elle constate l'usage d'un protocole en clair, ce qui est le fait que le
+# cours veut faire observer.
+alert tcp any any -> any 23 (msg:"LABO Protocole en clair - session Telnet vers le port 23"; flow:to_server,established; content:"login"; nocase; classtype:bad-unknown; sid:9000002; rev:1;)
+
+# --- Lecture d'un partage en clair ----------------------------------------------
+# SMB chiffre les échanges, mais la négociation initiale ne l'est pas : les
+# dialogues d'établissement voyagent en clair. La trame de négociation de SMB2
+# commence par la marque « FE 53 4D 42 », c'est-à-dire l'octet 0xFE suivi des
+# quatre lettres de SMB.
+#
+# La recherche ne fixe ni position ni profondeur. Le contenu d'un flux SMB
+# commence par un en-tête NetBIOS de quatre octets, qui précède la marque : une
+# règle qui chercherait cette marque à l'offset 0 ne se déclencherait jamais,
+# et l'absence d'alerte passerait pour une absence d'incident.
+alert tcp any any -> any 445 (msg:"LABO Acces a un partage - negociation SMB en clair"; flow:to_server,established; content:"|FE 53 4D 42|"; classtype:policy-violation; sid:9000003; rev:1;)
+
+# --- Flot de paquets ICMP ------------------------------------------------------
+# Un flot de deux cents paquets ICMP vers une seule adresse en quelques secondes
+# n'est pas une mesure de débit. Le seuil distingue le flot de la simple
+# vérification de joignabilité, qui ne produit que quelques paquets.
+alert icmp any any -> any any (msg:"LABO Deni de service - flot de paquets ICMP"; flow:stateless; threshold:type limit, track by_src, count 50, seconds 10; classtype:attempted-dos; sid:9000004; rev:1;)
