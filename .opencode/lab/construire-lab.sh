@@ -46,6 +46,14 @@
 #      son trafic visible, ce qui suffit aux quatre comportements de l'incident,
 #      puisque tous en partent.
 #
+#   4. Les journaux sont produits dans le volume de l'enquêteur. Le volume
+#      « flab-enquete » est monté sous /partage chez le collecteur et chez le
+#      serveur de fichiers : un fichier écrit dans /partage/journal y est donc lu
+#      par l'enquêteur dans ~/journal, en direct et sans copie. Aucun volume
+#      supplémentaire n'est nécessaire, et surtout aucune étape de copie
+#      intermédiaire ne peut altérer la preuve : le fichier que l'apprenant lit
+#      est exactement celui que le processus privilégié vient d'écrire.
+#
 # Le relais entre les deux segments est annoncé mais jamais exercé par les LAB.
 # Docker isole le trafic qui traverse deux ponts distincts, et lever cette
 # isolation suppose des privilèges sur l'hôte : aucun LAB n'en dépend.
@@ -94,6 +102,80 @@ demarrer_journal() {
   local hote=$1 nom=${1#flab-}
   ecrire_journal "$hote" "laboratoire" \
     "démarrage de $nom : services du laboratoire opérationnels, collecte activée"
+}
+
+# Préparer le répertoire des journaux dans le volume partagé.
+#
+# Le volume de l'enquêteur est monté sous /partage chez le collecteur et chez le
+# serveur de fichiers. Le répertoire y est créé en 755 et appartient à root :
+# l'enquêteur peut le parcourir et lire les fichiers qu'il contient, il ne peut
+# ni les modifier, ni en créer d'autres, ni les supprimer.
+#
+# Cette contrainte n'est pas un détail. Un journal qu'un compte ordinaire peut
+# réécrire ne vaut rien comme preuve : l'apprenant doit être dans la position de
+# celui qui consulte, jamais dans celle de celui qui fabrique. C'est aussi ce que
+# fait un vrai enquêteur devant un collecteur : il lit, il ne modifie pas.
+#
+# Les journaux restent donc écrits par des processus privilégiés, et le compte
+# de l'apprenant n'acquiert aucun privilège supplémentaire.
+preparer_journal_partage() {
+  docker exec -u root "$1" sh -c '
+    set -e
+    mkdir -p /partage/journal
+    chmod 0755 /partage/journal
+    chown root:root /partage/journal
+    ls -ld /partage/journal
+  ' >/dev/null
+}
+
+# Démarrer la collecte des journaux sur un hôte du laboratoire.
+#
+# Premier argument : le nom du conteneur. Deuxième et troisième arguments,
+# facultatifs : le chemin d'un fichier à relayer au collecteur, et l'étiquette
+# sous laquelle ses lignes y apparaîtront.
+#
+# La configuration est écrite depuis la machine, puis le fichier est relu par
+# rsyslog avant le démarrage. Deux raisons à cette manière de faire, toutes deux
+# mesurées. La déclaration du socket local contient un signe dollar, qu'une
+# chaîne simple transmise au conteneur ne restitue pas fidèlement : le socket ne
+# serait pas créé et la commande « logger » n'aurait nulle part où écrire. Et
+# rsyslog n'écrit rien sur sa sortie standard quand sa configuration est refusée :
+# sans contrôle préalable, un hôte resterait muet sans laisser de trace, et cette
+# panne serait elle aussi muette.
+demarrer_rsyslog_hote() {
+  local hote=$1 fichier=${2:-} etiquette=${3:-} controle
+  {
+    printf '%s\n' \
+      'module(load="imuxsock")' \
+      '$AddUnixListenSocket /dev/log' \
+      'global(workDirectory="/run/rsyslab")'
+    if [ -n "$fichier" ]; then
+      # Le module n'est chargé que lorsqu'il a un fichier à suivre. Cette
+      # condition est nécessaire, et elle a été mesurée : un module imfile
+      # chargé sans entrée refuse la configuration, son avertissement
+      # « no files configured to be monitored » valant refus. Un hôte qui n'a
+      # rien à relayer n'a pas à le charger.
+      printf '%s\n' \
+        'module(load="imfile" PollingInterval="2")' \
+        "input(type=\"imfile\" File=\"$fichier\" Tag=\"$etiquette\" Severity=\"info\" freshStartTail=\"off\")"
+    fi
+    printf '%s\n' \
+      '*.* /var/log/journal-hote.log' \
+      '*.* @10.10.0.50'
+  } | docker exec -i -u root "$hote" sh -c \
+      'mkdir -p /run/rsyslab && cat > /etc/rsyslab.conf'
+  # rsyslog écrit son diagnostic de contrôle sur sa sortie d'erreur, y compris
+  # quand la configuration est valide : la sortie est donc capturée, et ne
+  # remontée que si le contrôle échoue. Une configuration refusée arrête le
+  # montage, au lieu de laisser un hôte muet dont la panne serait elle aussi
+  # muette.
+  if ! controle=$(docker exec -u root "$hote" \
+                     rsyslogd -N1 -f /etc/rsyslab.conf 2>&1 >/dev/null); then
+    err "la configuration de collecte de $hote est refusée par rsyslog"
+    printf '%s\n' "$controle" >&2
+    return 1
+  fi
+  docker exec -d -u root "$hote" rsyslogd -n -i NONE -f /etc/rsyslab.conf
 }
 
 # ------------------------------------------------------------------- monter
@@ -170,16 +252,32 @@ monter() {
     "$IMAGE" sleep infinity >/dev/null
   ok "lab-app : 10.10.0.20"
 
+  # Le serveur de fichiers participe au volume de l'enquêteur : son journal
+  # d'accès au partage y est écrit, donc l'enquêteur le lit dans
+  # ~/journal/journal-samba.log, sans copie ni export intermédiaire.
   docker run -d --name "$PREFIXE-fichiers" --hostname lab-fichiers \
     --network "$RESEAU_CENTRAL" --ip 10.10.0.30 --cap-add NET_RAW --cap-add NET_ADMIN \
+    -v flab-enquete:/partage \
     "$IMAGE" sleep infinity >/dev/null
-  ok "lab-fichiers : 10.10.0.30"
+  ok "lab-fichiers : 10.10.0.30, journal du partage dans le volume partagé"
 
+  # Le collecteur participe au même volume : le journal qu'il rassemble est donc
+  # lu par l'enquêteur dans ~/journal/journal-reseau.log.
   docker run -d --name "$PREFIXE-collecteur" --hostname lab-collecteur \
     --network "$RESEAU_CENTRAL" --ip 10.10.0.50 \
     --cap-add NET_RAW --cap-add NET_ADMIN \
+    -v flab-enquete:/partage \
     "$IMAGE" sleep infinity >/dev/null
-  ok "lab-collecteur : 10.10.0.50"
+  ok "lab-collecteur : 10.10.0.50, journal de collecte dans le volume partagé"
+
+  # Le répertoire des journaux dans le volume partagé est créé une fois pour
+  # toutes, avant tout service qui écrit dedans, et par les deux hôtes qui y
+  # écrivent : la création est idempotente, et le laboratoire n'a pas à
+  # dépendre de l'ordre de démarrage des deux.
+  for hote in "$PREFIXE-fichiers" "$PREFIXE-collecteur"; do
+    preparer_journal_partage "$hote"
+  done
+  ok "répertoire ~/journal créé dans le volume, lisible et non modifiable par l'enquêteur"
 
   docker run -d --name "$PREFIXE-compromis" --hostname lab-compromis \
     --network "$RESEAU_FILIALE" --ip 10.20.0.10 --cap-add NET_RAW \
@@ -275,7 +373,7 @@ demarrer_services() {
 
   # Le partage de fichiers du serveur 10.10.0.30. Le compte et le mot de passe
   # sont ceux du laboratoire, décrits dans le tableau d'environnement du support.
-  # Samba journalise chaque connexion dans /var/log/samba/, ce qui donne au
+  # Samba journalise chaque connexion dans le volume partagé, ce qui donne au
   # chapitre consacré aux journaux une trace à rapprocher de la capture.
   # Cette préparation est exécutée en avant-plan, et non en arrière-plan comme
   # les autres services : c'est la seule étape qui doive échouer de façon visible.
@@ -287,13 +385,16 @@ demarrer_services() {
     set -e
     mkdir -p /srv/partage /var/log/samba /var/lib/samba/private /run/samba
     printf "partage du laboratoire\n" > /srv/partage/lisezmoi.txt
+    # Le fichier de journal est créé ici, et non par Samba à son premier
+    # démarrage. Le mode est posé avant la première écriture, et non après :
+    # Samba créait déjà ce fichier en 644, mais laisser la création au serveur
+    # ferait dépendre la lisibilité par l enquêteur d une valeur par défaut que
+    # rien dans le laboratoire ne contrôle. Le compte enqueteur n est pas root :
+    # il ne peut ni écrire dans ce fichier, ni le déplacer, ni le supprimer.
+    : > /partage/journal/journal-samba.log
+    chmod 0644 /partage/journal/journal-samba.log
     cat > /etc/samba/smb.conf.lab <<CONF
 [global]
-    # Sans ce niveau de détail, le serveur ne note que son propre démarrage :
-    # aucune ligne ne correspond à une connexion, et le chapitre consacré aux
-    # journaux n’a rien à rapprocher de la capture. Le niveau 1 suffit pour
-    # journaliser les sessions, sans remplir le fichier de messages inutiles.
-    #
     # Sans ce niveau de détail, le serveur ne note que son propre démarrage :
     # aucune ligne ne correspond à une connexion, et le chapitre consacré aux
     # journaux n’a rien à rapprocher de la capture. Le niveau 1 suffit pour
@@ -307,7 +408,12 @@ demarrer_services() {
     # manque ici est compensé ailleurs : la règle 9000003 du laboratoire journalise
     # la négociation SMB en clair, et c’est cette alerte qui atteste la lecture.
     log level = 1 auth:3
-    log file = /var/log/samba/journal-samba.log
+    # Le journal est écrit dans le volume partagé : c’est ce même fichier, et non
+    # une copie, que l enquêteur lit dans ~/journal/journal-samba.log. Le serveur
+    # de fichiers n héberge pas de second journal : un seul fichier, une seule
+    # source, et le chapitre peut donc rapprocher une ligne de ce journal d’un
+    # paquet de la capture sans avoir à choisir entre deux versions.
+    log file = /partage/journal/journal-samba.log
     max log size = 5000
 
 [partage]
@@ -331,7 +437,7 @@ CONF
     pdbedit -L | grep -q "^enquete:"
     smbd -D --configfile=/etc/samba/smb.conf --no-process-group
   ' >/dev/null
-  ok "SMB sur le port 445 de lab-fichiers, journal dans /var/log/samba/"
+  ok "SMB sur le port 445 de lab-fichiers, journal dans le volume partagé"
 
   # Le port 23 en clair du serveur de fichiers. Le démon Telnet d'Ubuntu ne
   # démarre pas sans inetd et busybox n'en fournit pas : le port est donc tenu par
@@ -419,31 +525,76 @@ CONF
 
   # Collecte des journaux. rsyslog écoute le port 514 en réception réseau et
   # rassemble les journaux de tous les hôtes du laboratoire.
-  docker exec -d "$PREFIXE-collecteur" sh -c '
-    printf "module(load=\"imudp\")\ninput(type=\"imudp\" port=\"514\")\n" > /etc/rsyslab.conf
-    printf "*.* /var/log/journal-reseau.log\n" >> /etc/rsyslab.conf
-    exec rsyslogd -n -f /etc/rsyslab.conf
-  '
-  ok "rsyslog en réception sur le port 514, journal dans /var/log/journal-reseau.log"
+  #
+  # Le journal rassemblé est écrit dans le volume partagé, donc lu par
+  # l'enquêteur dans ~/journal/journal-reseau.log. Il n'est écrit nulle part
+  # ailleurs : deux copies du même journal seraient deux sources, et
+  # l'apprenant ne saurait pas laquelle fait foi. Le fichier est créé en 644 par
+  # le collecteur, qui est root : l'enquêteur le lit, il ne le réécrit pas.
+  printf '%s\n' \
+    'module(load="imudp")' \
+    'input(type="imudp" port="514")' \
+    'global(workDirectory="/run/rsyslab")' \
+    '$FileCreateMode 0644' \
+    '$FileOwner root' \
+    '$FileGroup root' \
+    '*.* /partage/journal/journal-reseau.log' \
+  | docker exec -i -u root "$PREFIXE-collecteur" sh -c \
+      'mkdir -p /run/rsyslab && cat > /etc/rsyslab.conf'
+  if ! controle=$(docker exec -u root "$PREFIXE-collecteur" \
+                     rsyslogd -N1 -f /etc/rsyslab.conf 2>&1 >/dev/null); then
+    err "la configuration de collecte du collecteur est refusée par rsyslog"
+    printf '%s\n' "$controle" >&2
+    return 1
+  fi
+  docker exec -d -u root "$PREFIXE-collecteur" \
+    rsyslogd -n -i NONE -f /etc/rsyslab.conf
+  ok "rsyslog en réception sur le port 514, journal lu par l'enquêteur dans ~/journal/journal-reseau.log"
 
   # Les journaux du site central sont envoyés au collecteur : chaque hôte écrit
-  # d'abord son journal local, comme le fait toute machine, puis le transmet. Le
-  # poste compromis journalise aussi ses propres actions : c'est une source
-  # supplémentaire que le chapitre sur les journaux exploite.
+  # d'abord son journal local, comme le fait toute machine, puis le transmet.
   #
-  # Deux précisions sur rsyslog version 8.2512, installé dans l'image :
-  # le socket local /dev/log n'est plus créé tout seul et doit être déclaré par
-  # « $AddUnixListenSocket », sans quoi la commande « logger » n'a rien à écrire ;
-  # le fichier d'identification des processus doit être désactivé par « -i NONE »,
-  # sinon deux exécutions successives se contredisent sur le même fichier.
-  for hote in "$PREFIXE-app" "$PREFIXE-fichiers" "$PREFIXE-passerelle" \
-             "$PREFIXE-compromis" "$PREFIXE-filiale"; do
-    docker exec -d "$hote" sh -c '
-      printf "module(load=\"imuxsock\")\n\$AddUnixListenSocket /dev/log\n*.* /var/log/journal-hote.log\n*.* @10.10.0.50\n" > /etc/rsyslab.conf
-      exec rsyslogd -n -i NONE -f /etc/rsyslab.conf
-    '
-  done
+  # Deux hôtes transmettent en plus un fichier que leur produit n'écrit pas dans
+  # le journal système. Un serveur de fichiers ne fait pas syslog de ses
+  # ouvertures de session : son serveur Samba écrit dans son propre fichier. Un
+  # poste compromis ne déclare pas non plus les gestes qu'il commet. Sans ces
+  # deux entrées, le journal du collecteur ne contiendrait que des messages de
+  # démarrage, et le chapitre consacré aux journaux n'aurait rien à analyser.
+  #
+  # La transmission se fait par « imfile », qui suit un fichier déjà existant et
+  # en relaie chaque ligne au collecteur, étiquette par étiquette. Aucun second
+  # journal n'est créé de ce côté : le serveur de fichiers garde exactement le
+  # fichier que sa configuration Samba désigne déjà, et c'est ce fichier-là qui
+  # est lu par l'enquêteur et par le collecteur.
+  #
+  # L'intervalle de lecture est ramené à deux secondes. C'est le délai maximal
+  # qui borne la précision d'une chronologie fondée sur les journaux : un
+  # événement produit par un hôte n'apparaît au collecteur qu'au tour de lecture
+  # suivant. Une valeur de dix secondes, celle par défaut, ajouterait une part
+  # d'attente arbitraire à chaque événement sans rien gagner sur un laboratoire.
+  #
+  # Ce plafond n'est pas atteint dans la pratique, et la raison vaut d'être notée.
+  # Cette version de rsyslog surveille les fichiers par notify : la lecture
+  # intervient à l'écriture, et non au tour de sondage. Le délai mesuré sur ce
+  # laboratoire est de l'ordre de centièmes de seconde, très en deçà du plafond.
+  # C'est donc l'horodatage des lignes reçues, au dixième de seconde près, qui
+  # fixe la résolution d'une chronologie, et non le transport.
+  demarrer_rsyslog_hote "$PREFIXE-app"
+  demarrer_rsyslog_hote "$PREFIXE-passerelle"
+  demarrer_rsyslog_hote "$PREFIXE-filiale"
+  demarrer_rsyslog_hote "$PREFIXE-fichiers" \
+    /partage/journal/journal-samba.log samba-fichiers
+  demarrer_rsyslog_hote "$PREFIXE-compromis" \
+    /var/log/journal-scenario.log poste-compromis
   ok "journaux du site central et de la filiale envoyés à 10.10.0.50:514"
+
+  # Le journal d'actions du poste compromis est créé ici, vide, avant que la
+  # collecte ne se mette à le lire : le scénario d'incident l'écrit ensuite, et
+  # le relais n'a ainsi jamais à attendre l'apparition d'un fichier. La création
+  # ne change rien au scénario, qui continue d'écrire dans ce même chemin.
+  docker exec -u root "$PREFIXE-compromis" sh -c \
+    'mkdir -p /var/log && : > /var/log/journal-scenario.log && chmod 0644 /var/log/journal-scenario.log'
+  ok "journal d'actions du poste compromis prêt pour la transmission"
 
   # La collecte ne produit de preuve que si les hôtes journalisent réellement.
   # Un message de démarrage horodaté est écrit sur chaque hôte : il rend le
@@ -652,15 +803,120 @@ verifier() {
     echecs=$((echecs+1))
   fi
 
-  # 7. La collecte des journaux reçoit les flux du site central
-  if docker exec "$PREFIXE-collecteur" test -s /var/log/journal-reseau.log 2>/dev/null; then
-    ok "le collecteur reçoit les journaux du site central"
+  # 7. Les journaux sont lisibles par l'enquêteur, en compte ordinaire
+  #
+  #    Tous les contrôles de ce point passent par le poste de l'enquêteur et
+  #    par le compte « enqueteur ». C'est délibéré : la question que le support
+  #    doit pouvoir voir affirmée n'est pas « le fichier existe », mais
+  #    « l'apprenant peut-il le lire, et ne peut-il pas le réécrire ». Un contrôle
+  #    effectué en root dans le conteneur du collecteur ne répondrait à aucune
+  #    des deux.
+  #
+  #    Deux journaux sont vérifiés à ce point, tous deux dans le volume partagé ;
+  #    le journal du moteur de détection, qui vit dans le même volume, a fait
+  #    l'objet du point 6.
+  #      ~/journal/journal-reseau.log   le journal rassemblé par le collecteur
+  #      ~/journal/journal-samba.log    le journal d'accès du serveur de fichiers
+  journal_lisible() {
+    docker exec "$PREFIXE-enquete" sh -c \
+      "test -r '$1' && test -s '$1'" 2>/dev/null
+  }
+
+  #    Ces chemins sont affichés avec le tild du dossier personnel, comme le fera
+  #    le support. La substitution est écrite « ~ » avec une barre oblique
+  #    inversée devant elle : dans la partie droite d'une substitution de
+  #    paramètre, bash applique l'expansion du tild, et un tild nu y vaudrait le
+  #    dossier personnel de la machine qui lance le script. Le contrôleur
+  #    afficherait alors un chemin de laboratory absent et l'apprenant chercherait
+  #    au mauvais endroit.
+  for fichier in /home/enqueteur/journal/journal-reseau.log \
+                 /home/enqueteur/journal/journal-samba.log; do
+    if journal_lisible "$fichier"; then
+      ok "l'enquêteur lit ${fichier/#\/home\/enqueteur\//\~/}"
+    else
+      err "${fichier/#\/home\/enqueteur\//\~/} est absent, vide ou illisible par l'enquêteur"
+      echecs=$((echecs+1))
+    fi
+  done
+
+  # 8. La collecte rassemble réellement les journaux des autres hôtes
+  #
+  #    Le contrôle ne se contente pas de lire un fichier : il provoque les
+  #    événements qu'il veut vérifier. Exiger une trace déjà présente rendrait le
+  #    résultat dépendant de l'heure à laquelle la vérification est lancée, alors
+  #    que le scénario d'incident ne joue que toutes les huit minutes.
+  attendre_dans_journal() {
+    local motif=$1 secondes=${2:-40}
+    local fin=$(( SECONDS + secondes ))
+    while [ $SECONDS -lt $fin ]; do
+      if docker exec "$PREFIXE-enquete" \
+           grep -q "$motif" /home/enqueteur/journal/journal-reseau.log 2>/dev/null; then
+        return 0
+      fi
+      sleep 2
+    done
+    return 1
+  }
+
+  # Une lecture du partage, jouée depuis le poste compromis : c'est exactement
+  # le geste du scénario d'incident, et c'est ce geste qui produit les traces
+  # d'accès du serveur de fichiers.
+  if ! attendre_dans_journal samba-fichiers 5; then
+    docker exec "$PREFIXE-compromis" timeout 30 smbclient "//10.10.0.30/partage" \
+      -U "enquete%lab-2026" -c ls >/dev/null 2>&1 || true
+  fi
+  if attendre_dans_journal samba-fichiers 40; then
+    ok "le collecteur reçoit les événements d'accès du serveur de fichiers"
   else
-    err "le collecteur ne reçoit aucun journal"
+    err "les événements d'accès du serveur de fichiers n'atteignent pas le collecteur"
     echecs=$((echecs+1))
   fi
 
-  # 8. Le scénario d'incident tourne
+  if attendre_dans_journal poste-compromis 20; then
+    ok "le collecteur reçoit le journal d'actions du poste compromis"
+  else
+    err "le journal d'actions du poste compromis n'atteint pas le collecteur"
+    echecs=$((echecs+1))
+  fi
+
+  # Un message écrit à l'instant sur un hôte doit ressortir dans le journal
+  # rassemblé. La marque porte l'heure d'émission : une trace laissée par une
+  # vérification précédente ne peut donc pas faire passer celle-ci, et le contrôle
+  # mesure bien le délai de collecte au lieu de lire une relève antérieure.
+  marque="controleur-$(date -u +%H%M%S)-$$"
+  docker exec "$PREFIXE-passerelle" logger -t controleur "$marque" 2>/dev/null || true
+  if attendre_dans_journal "$marque" 30; then
+    ok "un message écrit sur un hôte du site central est rassemblé par le collecteur"
+  else
+    err "le collecteur ne rassemble pas les messages du site central"
+    echecs=$((echecs+1))
+  fi
+
+  # 9. L'enquêteur ne peut pas modifier les journaux
+  #
+  #    C'est la contrepartie obligatoire de la lecture. Un journal qu'un compte
+  #    ordinaire peut réécrire cesse d'être une preuve, et le chapitre qui apprend
+  #    à en tirer une chronologie serait faux. Le contrôle tente donc d écrire,
+  #    et exige que l'écriture échoue.
+  for fichier in /home/enqueteur/journal/journal-reseau.log \
+                 /home/enqueteur/journal/journal-samba.log; do
+    if docker exec "$PREFIXE-enquete" sh -c \
+         "printf 'essai' >> '$fichier'" 2>/dev/null; then
+      err "l'enquêteur a pu écrire dans ${fichier/#\/home\/enqueteur\//\~/}"
+      echecs=$((echecs+1))
+    else
+      ok "${fichier/#\/home\/enqueteur\//\~/} est en écriture refusée pour l'enquêteur"
+    fi
+  done
+  if docker exec "$PREFIXE-enquete" sh -c \
+       'touch ~/journal/journal-injecte.log' 2>/dev/null; then
+    err "l'enquêteur a pu créer un fichier dans ~/journal"
+    echecs=$((echecs+1))
+  else
+    ok "l'enquêteur ne peut pas créer de fichier dans ~/journal"
+  fi
+
+  # 10. Le scénario d'incident tourne
   if docker exec "$PREFIXE-compromis" pgrep -f scenario-incident >/dev/null 2>&1; then
     ok "le scénario d'incident tourne sur 10.20.0.10"
   else
@@ -668,7 +924,12 @@ verifier() {
     echecs=$((echecs+1))
   fi
 
-  # 9. Le dossier de livrables est accessible en écriture par l'enquêteur
+  # 11. Le dossier de livrables est accessible en écriture par l'enquêteur
+  #     Contradiction apparente avec le point 9, et il n'y en a pas : le compte
+  #     ordinaire écrit ses livrables dans son dossier de travail et dans aucun
+  #     autre. Cette distinction entre le dossier de travail et le dossier des
+  #     journaux est précisément ce que le chapitre sur la conservation des
+  #     preuves enseigne.
   if docker exec "$PREFIXE-enquete" sh -c \
       'mkdir -p ~/enquete && touch ~/enquete/.essai && test -w ~/enquete'; then
     ok "le dossier ~/enquete du poste de l'enquêteur est accessible en écriture"

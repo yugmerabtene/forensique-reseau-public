@@ -94,9 +94,9 @@
       "description": "Image du laboratoire : outils réseau, Suricata, Samba, rsyslog, compte ordinaire enqueteur, règles de détection"
     },
     ".opencode/lab/construire-lab.sh": {
-      "status": "créé et validé",
+      "status": "créé, validé et étendu",
       "last_modified": "2026-10-02",
-      "description": "Topologie à deux segments, sonde de détection partageant l'espace réseau du poste compromis, montage, vérification autonome, scénario d'incident et arrêt du laboratoire"
+      "description": "Topologie à deux segments, sonde de détection partageant l'espace réseau du poste compromis, montage, vérification autonome, scénario d'incident et arrêt. Étendu le 2026-10-02 : le volume partagé est monté chez le collecteur et chez le serveur de fichiers, qui y écrivent leurs journaux. L'apprenant les lit en direct dans ~/journal/journal-reseau.log et ~/journal/journal-samba.log, en lecture seule, sans copie ni export. Onze contrôles de vérification supplémentaires garantissent que les journaux sont lisibles par le compte ordinaire, alimentés par le trafic réel, et que l'apprenant ne peut ni les écrire ni les modifier. Délai de transport mesuré : sous 0,13 seconde, mais l'horodatage des lignes est à la seconde."
     },
     ".opencode/lab/scenario-incident.sh": {
       "status": "créé et validé",
