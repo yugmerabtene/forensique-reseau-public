@@ -314,8 +314,15 @@ correcte sur le disque, mais la session en cours l'ignore. C'est la cause la plu
 fréquente du constat « le système agentique n'est pas en place », et ce constat est
 alors faux. Il faut quitter opencode puis le relancer.
 
+**Racine du projet : le répertoire de lancement doit être la racine.** OpenCode lit
+`opencode.json` et `.opencode/` à partir du répertoire depuis lequel il est lancé,
+et ne va pas chercher la configuration dans un sous-répertoire. La racine de ce
+projet est donc `/home/yug/Documents/forensics`, là où opencode est lancé, et non un
+sous-répertoire du projet. Cette règle vaut pour tout déplacement : un `opencode.json`
+placé ailleurs rend le système agentique invisible sans produire la moindre erreur.
+
 **Vérification, à faire avant de conclure à un défaut.** Trois commandes, à lancer
-depuis `forensics-reseaux/` :
+depuis `/home/yug/Documents/forensics` :
 
 ```bash
 opencode agent list        # les quatre agents doivent apparaître

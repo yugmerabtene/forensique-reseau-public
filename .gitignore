@@ -52,3 +52,12 @@ __pycache__/
 # doivent jamais se retrouver dans un depot.
 /captures/
 /journaux/
+
+# Projet anterieur archive dans le repertoire de travail. Il ne fait pas partie
+# de la formation Forensique reseau et n'a rien a y etre versionne.
+/old/
+
+# Copie du syllabus de travail. La version versionnee est syllabus-original.txt,
+# extraite de la plateforme et verifiee. Les deux fichiers sont identiques au
+# moment du regroupement ; un seul est suivi.
+/syllabus.txt

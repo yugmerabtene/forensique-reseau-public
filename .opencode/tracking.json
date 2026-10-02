@@ -4,8 +4,9 @@
   "prestataire": "Ascent",
   "lieu": "Paris — présentiel",
   "model": "opencode/big-pickle",
-  "last_updated": "2026-10-02T13:40:00Z",
-  "current_task": "Système agentique vérifié de bout en bout dans une session neuve : agent par défaut orchestrator, modèle opencode/big-pickle, instructions AGENTS.md et CONTEXT.md chargées, sous-agents course-writer, code-tester et proofreader effectivement présents dans l'outil task. Lelaboratoire de détection est également opérationnel : sonde partageant l'espace réseau du poste compromis, moteur Suricata démarré sur l'interface mesurée, et les quatre règles du laboratoire observées en direct sur le trafic de l'incident. Aucun support de cours n'est rédigé : c'est la tâche suivante.",
+  "last_updated": "2026-10-02T14:10:00Z",
+  "racine_projet": "/home/yug/Documents/forensics — répertoire depuis lequel opencode est lancé. La configuration d'agents et le dépôt git s'y trouvent directement : opencode ne lit pas une configuration placée dans un sous-répertoire, et un opencode.json ailleurs rend le système agentique invisible sans aucune erreur.",
+  "current_task": "Système agentique corrigé et vérifié dans une session neuve, depuis le répertoire de lancement : agent par défaut orchestrator, modèle opencode/big-pickle, instructions AGENTS.md et CONTEXT.md chargées, sous-agents course-writer, code-tester et proofreader présents dans l'outil task. La cause du défaut était structurelle : la configuration se trouvait dans le sous-répertoire forensics-reseaux, que le répertoire de lancement n'atteint pas. La racine du projet a été remontée d'un niveau, sans perte d'historique git. Le laboratoire de détection reste opérationnel et conforme. Aucun support de cours n'est rédigé : c'est la tâche suivante.",
   "prochaine_tache": "Rédiger jour-1.md (C1 — M1 Introduction à la forensique réseau, 2 h ; C2 — M2 Capture et collecte des données réseau, 4 h) via course-writer, puis faire valider la technique par code-tester et la relecture finale par proofreader.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
