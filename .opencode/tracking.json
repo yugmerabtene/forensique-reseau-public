@@ -6,8 +6,8 @@
   "model": "opencode/big-pickle",
   "last_updated": "2026-10-02T14:10:00Z",
   "racine_projet": "/home/yug/Documents/forensics — répertoire depuis lequel opencode est lancé. La configuration d'agents et le dépôt git s'y trouvent directement : opencode ne lit pas une configuration placée dans un sous-répertoire, et un opencode.json ailleurs rend le système agentique invisible sans aucune erreur.",
-  "current_task": "Dépôt privé créé sur GitHub et configuré comme remote unique du projet. Le support de cours reste entièrement à produire : c'est la tâche suivante. La règle de zéro fuite de credentials a été respectée : aucun .env n'a été ouvert, l'authentification s'appuie sur le trousseau gh déjà établi par le formateur, jetons jamais affichés ni recopiés.",
-  "prochaine_tache": "Rédiger jour-1.md (C1 — M1 Introduction à la forensique réseau, 2 h ; C2 — M2 Capture et collecte des données réseau, 4 h) via course-writer, puis faire valider la technique par code-tester et la relecture finale par proofreader.",
+  "current_task": "Journée 1 terminée et validée : rédaction, validation technique sur l'image du laboratoire, et relecture finale. Les trois contrôleurs passent et la structure est validée fichier par fichier. Le laboratoire a été laissé dans son état de montage, son dossier de travail est vide. Reste les journées 2 et 3, qui s'appuient sur les sept livrables du jour 1.",
+  "prochaine_tache": "Rédiger jour-2.md (C3 — M3 Analyse des paquets et détection des anomalies, 3 h ; C4 — M4 Utilisation des journaux et des outils d'analyse réseau, 3 h) via course-writer, avec le même enchaînement : rédaction en deux volets de chapitre, validation technique par code-tester sur l'image, relecture par proofreader. Le jour 2 consomme capture-reference.pcap et inventaire-hotes.txt, et produit anomalies.md puis alertes-suricata.txt.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
     "workflow": "course-writer rédige -> code-tester teste et valide -> proofreader relit -> orchestrator consolide, met à jour ce fichier et commite",
@@ -119,23 +119,26 @@
       "description": "Configuration OpenCode : modèle imposé, agent orchestrateur, contexte et suivi"
     },
     "jour-1.md": {
-      "status": "à produire",
-      "description": "C1 — M1 Introduction à la forensique réseau (2 h) et C2 — M2 Capture et collecte des données réseau (4 h)"
+      "status": "rédigé, validé techniquement et relu",
+      "last_modified": "2026-10-02",
+      "description": "Journée 1 du 12 octobre 2026, 1213 lignes. C1 — M1 Introduction à la forensique réseau, 120 min ; C2 — M2 Capture et collecte des données réseau, 240 min, coupé par la pause déjeuner. Produit sept livrables : cadre-enquete.md, cadre-enquete.sha256, journal-acquisition.txt, capture-reference.pcap, capture-reference.pcap.sha256, inventaire-hotes.txt et inventaire-hotes.txt.sha256. Les onze commandes des deux LAB ont été rejouées sur l'image du laboratoire ; onze affirmations fausses ont été corrigées, dont la course d'armement de la capture, le volume et la durée du trafic iperf3, la portée de la capture, et l'appartenance du fichier produit à root."
     },
     "jour-2.md": {
       "status": "à produire",
+      "last_modified": "2026-10-02",
       "description": "C3 — M3 Analyse des paquets et détection des anomalies (3 h) et C4 — M4 Utilisation des journaux et des outils d'analyse réseau (3 h)"
     },
     "jour-3.md": {
       "status": "à produire",
+      "last_modified": "2026-10-02",
       "description": "C5 — M5 Réponse aux incidents de sécurité réseau (3 h) et C6 — M6 Rédaction du rapport d'enquête réseau (3 h)"
     }
   },
   "progress": {
     "total_modules": 6,
-    "completed": 0,
+    "completed": 2,
     "in_progress": 0,
-    "pending": 6,
+    "pending": 4,
     "contexte": "créé",
     "agents": "créés et vérifiés dans une session neuve : orchestrator par défaut, course-writer, code-tester et proofreader disponibles dans l'outil task",
     "verification_agents": "opencode agent list, opencode debug config et opencode run exécutés ; procédure inscrite dans CONTEXT.md",
@@ -144,7 +147,7 @@
     "laboratoire": "construit, monté, détection validée en direct, vérification autonome et stable sur trois exécutions",
     "depot_git": "créé en local, aucun remote",
     "test_obligatoire": "actif",
-    "jour1": "à produire",
+    "jour1": "produit : rédigé, testé sur l'image, relu, conforme aux quatre contrôleurs",
     "jour2": "à produire",
     "jour3": "à produire"
   }
