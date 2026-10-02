@@ -4,18 +4,21 @@
 # Topologie cible, conforme à CONTEXT.md et aux trois supports :
 #
 #   Réseau 10.10.0.0/24 — site central
-#     .1   lab-passerelle   passerelle du segment
-#     .10  lab-enquete      poste de l'enquêteur, première interface
-#     .20  lab-app          serveur applicatif : 22 SSH, 80 HTTP, 443 TLS, 5201 iperf3
-#     .30  lab-fichiers     serveur de fichiers : 23 Telnet et 445 SMB en clair
-#     .50  lab-collecteur   collecteur : syslog 514, Suricata sur le segment
-#     .60  lab-compromis    seconde interface du poste compromis
+#   .1   lab-passerelle   passerelle du segment
+#   .10  lab-enquete      poste de l'enquêteur, première interface
+#   .20  lab-app          serveur applicatif : 22 SSH, 80 HTTP, 443 TLS, 5201 iperf3
+#   .30  lab-fichiers     serveur de fichiers : 23 Telnet et 445 SMB en clair
+#   .50  lab-collecteur   collecteur de journaux : syslog 514
+#   .60  lab-compromis    seconde interface du poste compromis
 #
 #   Réseau 10.20.0.0/24 — filiale
-#     .1   lab-passerelle   seconde interface de la même passerelle
-#     .10  lab-compromis    poste compromis, à l'origine de l'incident
-#     .20  lab-filiale      serveur de la filiale : 22 SSH et 80 HTTP
-#     .30  lab-enquete      seconde interface du poste de l'enquêteur
+#   .1   lab-passerelle   seconde interface de la même passerelle
+#   .10  lab-compromis    poste compromis, à l'origine de l'incident
+#   .20  lab-filiale      serveur de la filiale : 22 SSH et 80 HTTP
+#   .30  lab-enquete      seconde interface du poste de l'enquêteur
+#
+#   Sonde de détection, sans adresse propre
+#   lab-sonde   partage l'espace réseau de lab-compromis et y exécute Suricata
 #
 # Deux décisions structurantes, et leur raison :
 #
@@ -30,6 +33,18 @@
 #      segmentation, et c'est exactement ce que le chapitre sur la réponse à
 #      l'incident doit faire remarquer : une machine de la filiale ne devrait pas
 #     joindre directement les serveurs du site central.
+#
+#   3. Le moteur de détection tourne dans un conteneur qui partage l'espace
+#      réseau du poste compromis, et non dans le collecteur. Ce n'est pas un
+#      détail d'implémentation : c'est la seule position d'observation possible
+#      ici. Un pont Docker ne livre le trafic unicast qu'au port destinataire, et
+#      n'honore pas le mode promiscuë : un conteneur du segment central ne voit
+#      jamais le trafic échangé entre deux autres machines de ce segment. C'est
+#      mesuré : trois tentatives de capture depuis le collecteur, dont deux en
+#      mode promiscuë forcé, n'ont enregistré aucun paquet, alors que le trafic
+#      circulait. Partager l'espace réseau du poste suspect rend en revanche tout
+#      son trafic visible, ce qui suffit aux quatre comportements de l'incident,
+#      puisque tous en partent.
 #
 # Le relais entre les deux segments est annoncé mais jamais exercé par les LAB.
 # Docker isole le trafic qui traverse deux ponts distincts, et lever cette
@@ -50,7 +65,7 @@ RESEAU_CENTRAL="forensique-net-central"    # 10.10.0.0/24
 RESEAU_FILIALE="forensique-net-filiale"    # 10.20.0.0/24
 PREFIXE="flab"
 # Suffixes des conteneurs, sans le préfixe : le script les supprime tous à l'arrêt.
-APPS="passerelle enquete app fichiers collecteur compromis filiale"
+APPS="passerelle enquete app fichiers collecteur compromis filiale sonde"
 
 # ---------------------------------------------------------------- utilitaires
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
@@ -181,6 +196,21 @@ monter() {
     "$IMAGE" sleep infinity >/dev/null
   ok "lab-filiale : 10.20.0.20"
 
+  # La sonde de détection partage l'espace réseau du poste compromis. Elle n'a
+  # donc aucune adresse propre : elle voit le trafic des deux interfaces du poste
+  # suspect, parce qu'elles sont les siennes. Elle ne peut pas non plus porter un
+  # nom d'hôte propre, Docker l'interdisant dès lors qu'un espace réseau est
+  # partagé. Le volume du poste de l'enquêteur est monté chez elle pour que le
+  # journal EVE soit lisible par l'enquêteur dans ~/suricata/eve.json, sans copie
+  # ni export intermédiaire.
+  docker run -d --name "$PREFIXE-sonde" \
+    --network "container:$PREFIXE-compromis" \
+    --user root \
+    --cap-add NET_RAW --cap-add NET_ADMIN \
+    -v flab-enquete:/sortie \
+    "$IMAGE" sleep infinity >/dev/null
+  ok "lab-sonde : moteur de détection dans l'espace réseau de lab-compromis"
+
   log "Démarrage des services annoncés dans le support"
   demarrer_services
 
@@ -193,6 +223,10 @@ monter() {
   fi
 
   log "Lancement du scénario d'incident"
+  # Une boucle déjà en cours est arrêtée avant d'en lancer une nouvelle. Deux
+  # tours superposés doubleraient le trafic observé et les journaux, et
+  # l'apprenant lirait des répétitions qu'il ne saurait pas expliquer.
+  docker exec "$PREFIXE-compromis" pkill -f 'scenario-incident' 2>/dev/null || true
   docker cp scenario-incident.sh "$PREFIXE-compromis":/tmp/scenario-incident.sh
   docker exec -d "$PREFIXE-compromis" bash /tmp/scenario-incident.sh
   ok "scénario d'incident lancé sur lab-compromis"
@@ -254,6 +288,28 @@ demarrer_services() {
     mkdir -p /srv/partage /var/log/samba /var/lib/samba/private /run/samba
     printf "partage du laboratoire\n" > /srv/partage/lisezmoi.txt
     cat > /etc/samba/smb.conf.lab <<CONF
+[global]
+    # Sans ce niveau de détail, le serveur ne note que son propre démarrage :
+    # aucune ligne ne correspond à une connexion, et le chapitre consacré aux
+    # journaux n’a rien à rapprocher de la capture. Le niveau 1 suffit pour
+    # journaliser les sessions, sans remplir le fichier de messages inutiles.
+    #
+    # Sans ce niveau de détail, le serveur ne note que son propre démarrage :
+    # aucune ligne ne correspond à une connexion, et le chapitre consacré aux
+    # journaux n’a rien à rapprocher de la capture. Le niveau 1 suffit pour
+    # journaliser les sessions, sans remplir le fichier de messages inutiles.
+    #
+    # Le module « auth » est monté au niveau 3 parce qu’il produit la preuve
+    # utile : les échanges d’authentification NTLM qui correspondent à la lecture
+    # du partage. Un niveau supérieur a été essayé pour obtenir en plus la ligne
+    # d’ouverture de service ; sur cette version de Samba, cette ligne ne figure
+    # dans aucun des journaux accessibles et n’a donc pas été retenue. Ce qui
+    # manque ici est compensé ailleurs : la règle 9000003 du laboratoire journalise
+    # la négociation SMB en clair, et c’est cette alerte qui atteste la lecture.
+    log level = 1 auth:3
+    log file = /var/log/samba/journal-samba.log
+    max log size = 5000
+
 [partage]
     comment = Partage du laboratoire
     path = /srv/partage
@@ -287,34 +343,38 @@ CONF
     'while true; do printf "Ubuntu 26.04 LTS\r\nlab-fichiers login: " | timeout 30 busybox nc -l -p 23 >/dev/null 2>&1; done'
   ok "Telnet en clair sur le port 23 de lab-fichiers"
 
-  # Collecte des journaux et détection. rsyslog écoute le port 514 en réception
-  # réseau, et Suricata surveille le segment du site central puis écrit ses
-  # alertes au format EVE JSON. Zeek et Splunk ne sont pas installés : ils ne
-  # figurent pas dans les dépôts de distribution, et le support les présente
+  # Détection. Suricata s'exécute dans la sonde, qui partage l'espace réseau du
+  # poste compromis, et surveille l'interface par laquelle ce poste atteint le
+  # site central : c'est l'incident qui part de cette machine, donc c'est son
+  # trafic qui doit être analysé. Zeek et Splunk ne sont pas installés : ils ne
+  # figurent pas dans les dépôts de la distribution, et le support les présente
   # comme des outils optionnels, avec ce journal comme repli.
   #
-  # Les règles chargées sont celles de la distribution, référencées par motif :
-  # la version installée range les règles d'événements sous
-  # « <source>-events.rules » et les règles de fichiers sous « files.rules ».
-  # Suricata refuse de démarrer si une règle référencée est absente ; le motif
-  # évite donc de dépendre d'un nom de fichier qui varie d'une version à l'autre.
+  # Seules les règles du laboratoire sont chargées. Les règles livrées avec la
+  # distribution ne sont pas actives ici, pour trois raisons mesurées : quinze
+  # d'entre elles référencent des événements de protocoles que la configuration
+  # désactive et refusent donc de se charger, une règle signale des sommes de
+  # contrôle invalides qui ne correspondent à aucun incident — le moteur
+  # observant le poste suspect, il capte ses propres émissions avant que le
+  # noyau n'ait calculé la somme — et, mêlées aux nôtres, elles empechaient les
+  # règles de l'incident de se déclencher. Un moteur qui ne surveille que ce
+  # qu'il doit alerter est plus lisible, et c'est celui que le cours enseigne.
   #
-  # Le fichier « laboratoire.rules » est ajouté en dernier : il porte les règles
-  # de détection de l'incident, celles qui produisent les alertes attendues au
-  # chapitre consacré aux journaux. Les règles de la distribution ne peuvent pas
-  # le faire : elles ne couvrent que des événements techniques du moteur.
+  # Le chemin du fichier est donné en entier. La forme relative a été observée
+  # comme ignorée de façon intermitente par cette version du moteur, sans raison
+  # apparente : le fichier n'est chargé qu'une fois sur deux.
   #
-  # Ce bloc et les suivants transmettent leur contenu au shell du conteneur dans
+  # Ce bloc et le suivant transmettent leur contenu au shell du conteneur dans
   # une chaîne simple. Aucun commentaire contenant une apostrophe droite ne doit
   # y figurer : cette apostrophe fermerait la chaîne, et le shell de la machine
   # exécuterait la suite du script au lieu du conteneur. Les commentaires sont
   # donc placés avant l'ouverture de la chaîne ou après sa fermeture.
-  docker exec -d "$PREFIXE-collecteur" sh -c '
-    mkdir -p /var/log/suricata
+  docker exec -d "$PREFIXE-sonde" sh -c '
+    mkdir -p /sortie/suricata
     cat > /etc/suricata/laboratoire.yaml <<CONF
 %YAML 1.1
 ---
-default-log-dir: /var/log/suricata
+default-log-dir: /sortie/suricata
 outputs:
   - eve-log:
       enabled: yes
@@ -342,18 +402,23 @@ app-layer:
       enabled: yes
 default-rule-path: /etc/suricata/rules
 rule-files:
-  - "*-events.rules"
-  - files.rules
-  - laboratoire.rules
+  - /etc/suricata/rules/laboratoire.rules
 classification-file: /etc/suricata/classification.config
 reference-config-file: /etc/suricata/reference.config
 CONF
-    exec suricata -c /etc/suricata/laboratoire.yaml -i eth0 -l /var/log/suricata --set unix-command.enabled=no
+    exec suricata -c /etc/suricata/laboratoire.yaml -i eth1 -l /sortie/suricata --set unix-command.enabled=no
   '
-  # Suricata surveille l'interface du segment du site central, et non toutes
-  # celles du collecteur : c'est ce segment qui porte l'incident.
-  ok "Suricata surveille 10.10.0.0/24 et écrit /var/log/suricata/eve.json"
+  # La sonde surveille l'interface par laquelle le poste compromis atteint le site
+  # central : c'est par là que part l'incident, et c'est le seul trafic qu'elle
+  # voit. L'interface est nommée explicitement, deux raisons ayant été mesurées :
+  # la capture sur « any » est refusée par cette version du moteur, et la
+  # déclaration des deux interfaces du poste fait échouer la mise en grappe de la
+  # couche de capture. Le journal est écrit dans le volume du poste de
+  # l'enquêteur : il y est lisible sous ~/suricata/eve.json.
+  ok "Suricata analyse le trafic du poste compromis et écrit ~/suricata/eve.json"
 
+  # Collecte des journaux. rsyslog écoute le port 514 en réception réseau et
+  # rassemble les journaux de tous les hôtes du laboratoire.
   docker exec -d "$PREFIXE-collecteur" sh -c '
     printf "module(load=\"imudp\")\ninput(type=\"imudp\" port=\"514\")\n" > /etc/rsyslab.conf
     printf "*.* /var/log/journal-reseau.log\n" >> /etc/rsyslab.conf
@@ -465,10 +530,28 @@ verifier() {
   fi
 
   # 3. États de port annoncés par le support
+  #
+  #    Chaque état de port est interrogé jusqu'à trois fois. Cette répétition
+  #    compense une propriété réelle du démon Telnet du laboratoire, et elle ne
+  #    masque aucun défaut : un service réellement arrêté échoue aux trois
+  #    tentatives. Le seul démon Telnet installable hors ligne sur cette image
+  #    est celui de busybox, et il n'accepte qu'une seule connexion en attente.
+  #    Pendant que le scénario d'incident ouvre et ferme ses sessions Telnet, une
+  #    sonde qui se présente au même instant est refusée : nmap rapporte alors le
+  #    port 23 fermé alors qu'il est ouvert. Ce faux négatif a été observé sur ce
+  #    laboratoire ; deux secondes d'écart suffisent à le lever.
   attendre_etat() {
     local ip=$1 port=$2 etat=$3
-    if docker exec "$PREFIXE-enquete" \
-        nmap -sT -n -p "$port" "$ip" 2>/dev/null | grep -q "$port/tcp *$etat"; then
+    local essai constant=0
+    for essai in 1 2 3; do
+      if docker exec "$PREFIXE-enquete" \
+          nmap -sT -n -p "$port" "$ip" 2>/dev/null | grep -q "$port/tcp *$etat"; then
+        constant=1
+        break
+      fi
+      sleep 2
+    done
+    if [ "$constant" -eq 1 ]; then
       ok "$ip port $port = $etat"
     else
       err "$ip port $port n'est pas $etat"; echecs=$((echecs+1))
@@ -503,26 +586,69 @@ verifier() {
 
   # 5. Une capture est possible, et le trafic à capturer est généré en même temps
   #    que la capture : sinon tcpdump attend indéfiniment les deux paquets annoncés.
+  #    La capture se fait par « sudo » : le compte enqueteur n'a pas les droits
+  #    nécessaires sur l'interface, et les capacités posées sur le binaire ne
+  #    peuvent pas les lui donner, car le jeu de droits hérité d'un processus non
+  #    privilégié est vide. Le mot de passe n'est pas demandé, l'image l'accorde.
   if docker exec "$PREFIXE-enquete" sh -c \
-      'timeout 20 sh -c "tcpdump -c4 -w /tmp/verif.pcap icmp & sleep 2; ping -c4 -W1 10.10.0.20 >/dev/null 2>&1; wait"' \
+      'sudo timeout 20 sh -c "tcpdump -c4 -w /tmp/verif.pcap icmp & sleep 2; ping -c4 -W1 10.10.0.20 >/dev/null 2>&1; wait"' \
       >/dev/null 2>&1 \
-     && docker exec "$PREFIXE-enquete" capinfos -c /tmp/verif.pcap >/dev/null 2>&1; then
-    ok "tcpdump capture le trafic et la capture est exploitable"
+     && docker exec "$PREFIXE-enquete" sudo capinfos -c /tmp/verif.pcap >/dev/null 2>&1; then
+    ok "sudo tcpdump capture le trafic et la capture est exploitable"
   else
     err "tcpdump ne produit pas de capture exploitable"; echecs=$((echecs+1))
   fi
 
-  # 6. Suricata produit un journal EVE exploitable
-  if docker exec "$PREFIXE-collecteur" test -s /var/log/suricata/eve.json 2>/dev/null; then
-    if docker exec "$PREFIXE-collecteur" sh -c \
-        'tail -n 200 /var/log/suricata/eve.json | jq -e -c . >/dev/null' 2>/dev/null; then
+  # 6. Suricata produit un journal EVE exploitable, et cet alertes contient au
+  #    moins une alerte issue des règles du laboratoire. Un journal rempli de
+  #    simples entrées de flux prouverait que le moteur tourne, pas qu'il
+  #    détecte l'incident : c'est la seconde propriété qui rend le livrable possible.
+  #
+  #    Le contrôle ne se contente pas de lire le journal : il provoque d'abord
+  #    l'incident qu'il veut vérifier. Exiger une alerte déjà présente rendrait le
+  #    résultat dépendant de l'heure à laquelle la vérification est lancée, puisque
+  #    le scénario d'incident ne joue ses comportements que toutes les huit
+  #    minutes. Le contrôle déclenche donc un balayage bref depuis le poste
+  #    compromis, puis attend l'alerte. Le balayage est exactement celui du
+  #    scénario : huit ports inhabituels suffisent à franchir le seuil de cinq
+  #    segments SYN en trente secondes.
+  eve_valide() {
+    docker exec "$PREFIXE-enquete" sh -c \
+      'tail -n 400 /home/enqueteur/suricata/eve.json 2>/dev/null | jq -e -c . >/dev/null' 2>/dev/null
+  }
+
+  alerte_labo() {
+    docker exec "$PREFIXE-enquete" sh -c \
+      'jq -r "select(.event_type==\"alert\") | .alert.signature_id" \
+         /home/enqueteur/suricata/eve.json 2>/dev/null | grep -q "^90000"' 2>/dev/null
+  }
+
+  if ! alerte_labo; then
+    log "Aucune alerte des règles du laboratoire : déclenchement d'un balayage de contrôle"
+    docker exec "$PREFIXE-compromis" \
+      nmap -sT -n -Pn -p 21,25,53,110,139,143,3306,3389 10.10.0.30 >/dev/null 2>&1 || true
+    attente=0
+    while [ "$attente" -lt 60 ] && ! alerte_labo; do
+      sleep 3
+      attente=$((attente+3))
+    done
+  fi
+
+  if docker exec "$PREFIXE-enquete" test -s /home/enqueteur/suricata/eve.json 2>/dev/null; then
+    if eve_valide; then
       ok "le journal EVE de Suricata est produit et se lit avec jq"
     else
       err "le journal EVE de Suricata n'est pas du JSON valide"
       echecs=$((echecs+1))
     fi
+    if alerte_labo; then
+      ok "au moins une alerte des règles du laboratoire est présente"
+    else
+      err "aucune alerte des règles du laboratoire dans le journal EVE"
+      echecs=$((echecs+1))
+    fi
   else
-    err "Suricata n'a produit aucun journal dans /var/log/suricata/eve.json"
+    err "Suricata n'a produit aucun journal dans ~/suricata/eve.json"
     echecs=$((echecs+1))
   fi
 
@@ -564,6 +690,7 @@ verifier() {
 # exemple après un redémarrage du conteneur du poste compromis.
 scenario() {
   log "Relance du scénario d'incident sur lab-compromis"
+  docker exec "$PREFIXE-compromis" pkill -f 'scenario-incident' 2>/dev/null || true
   docker cp scenario-incident.sh "$PREFIXE-compromis":/tmp/scenario-incident.sh
   docker exec -d "$PREFIXE-compromis" bash /tmp/scenario-incident.sh
   ok "scénario d'incident relancé"
