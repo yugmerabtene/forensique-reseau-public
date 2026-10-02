@@ -6,7 +6,7 @@
   "model": "opencode/big-pickle",
   "last_updated": "2026-10-02T14:10:00Z",
   "racine_projet": "/home/yug/Documents/forensics — répertoire depuis lequel opencode est lancé. La configuration d'agents et le dépôt git s'y trouvent directement : opencode ne lit pas une configuration placée dans un sous-répertoire, et un opencode.json ailleurs rend le système agentique invisible sans aucune erreur.",
-  "current_task": "Système agentique corrigé et vérifié dans une session neuve, depuis le répertoire de lancement : agent par défaut orchestrator, modèle opencode/big-pickle, instructions AGENTS.md et CONTEXT.md chargées, sous-agents course-writer, code-tester et proofreader présents dans l'outil task. La cause du défaut était structurelle : la configuration se trouvait dans le sous-répertoire forensics-reseaux, que le répertoire de lancement n'atteint pas. La racine du projet a été remontée d'un niveau, sans perte d'historique git. Le laboratoire de détection reste opérationnel et conforme. Aucun support de cours n'est rédigé : c'est la tâche suivante.",
+  "current_task": "Dépôt privé créé sur GitHub et configuré comme remote unique du projet. Le support de cours reste entièrement à produire : c'est la tâche suivante. La règle de zéro fuite de credentials a été respectée : aucun .env n'a été ouvert, l'authentification s'appuie sur le trousseau gh déjà établi par le formateur, jetons jamais affichés ni recopiés.",
   "prochaine_tache": "Rédiger jour-1.md (C1 — M1 Introduction à la forensique réseau, 2 h ; C2 — M2 Capture et collecte des données réseau, 4 h) via course-writer, puis faire valider la technique par code-tester et la relecture finale par proofreader.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
@@ -14,12 +14,13 @@
     "activee": true
   },
   "git": {
-    "remote": null,
+    "remote": "origin — https://github.com/yugmerabtene/forensique-reseau.git",
     "branche": "main",
-    "auteur": null,
+    "auteur": "youghourtamerabtene",
     "depot_cree_le": "2026-10-02",
-    "depot_pousse": false,
-    "note": "Aucun remote configuré à ce stade. Le push reste impossible tant qu'un dépôt privé n'est pas ajouté ; le Worktree est committé en local."
+    "depot_pousse": true,
+    "visibilite": "privée",
+    "note": "Dépôt privé unique, créé le 2026-10-02 sous le compte gh actif. Le second compte est invité en collaborateur avec le droit write : l'invitation reste à accepter de son côté. Aucun jeton n'a été lu, affiché ni recopié : l'authentification s'appuie sur le trousseau gh déjà en place, et aucun .env du projet n'a été ouvert. La visibilité privée n'est pas modifiée sans décision explicite du formateur."
   },
   "dates": {
     "jour1": "2026-10-12",
