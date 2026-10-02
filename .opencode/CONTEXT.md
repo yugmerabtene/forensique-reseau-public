@@ -291,6 +291,46 @@ rétrogradée d'un niveau sortirait du chapitre au rendu.]
 
 ## Règles de Format
 
+### Système agentique — ce qui est en place et comment le vérifier
+
+Le projet est conduit par un agent principal, `orchestrator`, et trois sous-agents.
+Ce sont des agents OpenCode réels : ils sont déclarés une fois pour toutes, ils ne
+sont pas décrits seulement dans ce fichier.
+
+| Élément | Emplacement | Rôle |
+|---------|-------------|------|
+| Agent principal | `opencode.json`, clé `agent.orchestrator` | Pilote la production, délègue, consolide |
+| Agent par défaut | `opencode.json`, clé `default_agent` | Force le démarrage sur `orchestrator` |
+| Rédacteur | `.opencode/agent/course-writer.md` | Rédaction des chapitres, modules, LAB, exercices |
+| Validateur | `.opencode/agent/code-tester.md` | Validation des commandes, filtres et laboratoire |
+| Relecteur | `.opencode/agent/proofreader.md` | Relecture finale et contrôle de conformité |
+| Contexte | `.opencode/CONTEXT.md`, clé `instructions` | Chargé dans chaque session |
+| Modèle imposé | `opencode/big-pickle` | Le seul modèle autorisé, sur les quatre agents |
+
+**Redémarrage obligatoire après toute création ou renommage d'agent.** OpenCode
+établit sa liste d'agents au démarrage de la session. Un agent ajouté pendant une
+session n'apparaît pas dans l'outil `task` de cette session : la configuration est
+correcte sur le disque, mais la session en cours l'ignore. C'est la cause la plus
+fréquente du constat « le système agentique n'est pas en place », et ce constat est
+alors faux. Il faut quitter opencode puis le relancer.
+
+**Vérification, à faire avant de conclure à un défaut.** Trois commandes, à lancer
+depuis `forensics-reseaux/` :
+
+```bash
+opencode agent list        # les quatre agents doivent apparaître
+opencode debug config      # default_agent doit valoir orchestrator
+opencode run "quel est ton nom d'agent et quels sous-agents sont disponibles ?"
+```
+
+La troisième est la seule décisive : elle interroge une session neuve, dans les
+mêmes conditions que l'utilisateur. Un agent annoncé dans un fichier mais absent de
+cette réponse désigne une configuration non chargée, pas un agent fonctionnel.
+
+---
+
+## Règles de Format
+
 ### Autonomie d'exécution
 
 - L'utilisateur donne le mandat d'exécution sans validation : **aucune demande
