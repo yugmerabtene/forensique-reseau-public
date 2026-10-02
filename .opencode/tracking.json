@@ -4,8 +4,8 @@
   "prestataire": "Ascent",
   "lieu": "Paris — présentiel",
   "model": "opencode/big-pickle",
-  "last_updated": "2026-10-02T11:00:00Z",
-  "current_task": "Infrastructure de production en place et vérifiée : trois sous-agents alignés sur le modèle de référence du projet Docker (course-writer, code-tester, proofreader), configuration opencode.json valide, scripts de contrôle et d'export PDF testés, laboratoire Docker monté et validé par 23 vérifications. Aucun support de cours n'est encore rédigé : c'est la tâche suivante.",
+  "last_updated": "2026-10-02T13:00:00Z",
+  "current_task": "Laboratoire de détection rendu opérationnel de bout en bout. Le moteur Suricata a été installé dans une sonde qui partage l'espace réseau du poste compromis, car un conteneur témoin sur le même pont Docker ne voit pas le trafic d'un tiers ; l'incident est maintenant capturé et les quatre règles du laboratoire se déclenchent effectivement. Trois défauts de fond ont été diagnostiqués et corrigés : la commande de démarrage ne désignait aucune interface et le moteur refusait de démarrer, la bannière Telnet voyage du port 23 vers un port élevé et ne pouvait donc jamais satisfaire un filtre sur le port 23 en destination, et l'état de flux est peu fiable puisque le moteur observe les émissions du poste suspect avant calcul de leur somme de contrôle. Le contrôle de vérification est devenu autonome : il provoque lui-même l'incident qu'il vérifie, et il aboutit désormais à trois exécutions consécutives sans échec. Aucun support de cours n'est encore rédigé : c'est la tâche suivante.",
   "prochaine_tache": "Rédiger jour-1.md (C1 — M1 Introduction à la forensique réseau, 2 h ; C2 — M2 Capture et collecte des données réseau, 4 h) via course-writer, puis faire valider la technique par code-tester et la relecture finale par proofreader.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
@@ -94,7 +94,7 @@
     ".opencode/lab/construire-lab.sh": {
       "status": "créé et validé",
       "last_modified": "2026-10-02",
-      "description": "Topologie à deux segments, montage, vérification, scénario d'incident et arrêt du laboratoire"
+      "description": "Topologie à deux segments, sonde de détection partageant l'espace réseau du poste compromis, montage, vérification autonome, scénario d'incident et arrêt du laboratoire"
     },
     ".opencode/lab/scenario-incident.sh": {
       "status": "créé et validé",
@@ -102,9 +102,9 @@
       "description": "Boucle d'incident : balayage, Telnet en clair, lecture de partage, flot ICMP, balayage de la filiale"
     },
     ".opencode/lab/regles-detection.rules": {
-      "status": "créé et validé",
+      "status": "créé et validé en direct",
       "last_modified": "2026-10-02",
-      "description": "Règles Suricata du laboratoire, produit du livrable alertes-suricata.txt"
+      "description": "Règles Suricata du laboratoire, produit du livrable alertes-suricata.txt : les quatre identifiants 9000001 à 9000004 ont été observés en direct sur le trafic de l'incident"
     },
     ".opencode/lab/telecharger-paquets.sh": {
       "status": "créé et exécuté",
@@ -138,7 +138,7 @@
     "agents": "créés",
     "scripts_controle": "créés et testés",
     "export_pdf": "créé et testé",
-    "laboratoire": "construit, monté et validé",
+    "laboratoire": "construit, monté, détection validée en direct, vérification autonome et stable sur trois exécutions",
     "depot_git": "créé en local, aucun remote",
     "test_obligatoire": "actif",
     "jour1": "à produire",

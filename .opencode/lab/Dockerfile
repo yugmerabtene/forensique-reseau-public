@@ -76,13 +76,20 @@ RUN mkdir -p /home/enqueteur/enquete && chown -R enqueteur:enqueteur /home/enque
 RUN printf 'enqueteur ALL=(ALL) NOPASSWD:ALL\n' > /etc/sudoers.d/enqueteur \
  && chmod 0440 /etc/sudoers.d/enqueteur
 
-# L'apprenant travaille en compte ordinaire, et le support lui fait lancer
-# « tcpdump » sans « sudo ». Pour que cette commande fonctionne malgré tout, le
-# binaire reçoit les deux capacités qui ouvrent un descripteur de capture, au lieu
-# d'accorder ces capacités au conteneur entier : elles resteraient sans effet sur
-# un processus qui n'est pas root.
-RUN setcap cap_net_raw,cap_net_admin+eip /usr/bin/tcpdump \
- && getcap /usr/bin/tcpdump
+# L'apprenant travaille en compte ordinaire et lance ses captures par « sudo ».
+# Aucune capacité n'est posée sur le binaire tcpdump : cela ne fonctionnerait
+# pas. Un fichier de capacités n'accorde ses droits que dans la mesure du jeu de
+# droits déjà hérité par le processus, et ce jeu est vide pour un utilisateur non
+# privilégié. Poser des capabilities sur un binaire donne donc l'illusion que la
+# commande fonctionne sans privilège, alors qu'elle échoue avec « operation not
+# permitted ». Le compte enqueteur dispose d'un sudo sans mot de passe, ce qui est
+# la pratique normale d'un poste d'enquête, et ce que le support annonce.
+RUN set -eu; \
+    if getcap /usr/bin/tcpdump | grep -q .; then \
+        echo "CAPACITE INATTENDUE SUR TCPDUMP"; exit 1; \
+    fi; \
+    grep -q '^enqueteur ALL=(ALL) NOPASSWD:ALL' /etc/sudoers.d/enqueteur \
+      || { echo "SUDO SANS MOT DE PASSE ABSENT"; exit 1; }
 
 # Règles de détection de l'incident du laboratoire. Les règles installées avec
 # Suricata ne couvrent que des événements techniques : elles surveillent la
