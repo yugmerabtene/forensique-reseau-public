@@ -145,7 +145,11 @@ def controler_blocs(fichier, texte):
 
 def controler_terminologie(fichier, texte):
     motifs = [
-        (r"[Ss]équence", "terme proscrit : « séquence » (écrire chapitre)"),
+        # La frontière de mot est indispensable : sans elle, le mot français
+        # « conséquence » contient la suite « séquence » et était signalé à tort.
+        # Le tiret est exclu du même examen, pour que « sous-sequence » ne soit
+        # pas confondu avec le terme proscrit.
+        (r"(?<![\w-])[Ss]équence", "terme proscrit : « séquence » (écrire chapitre)"),
         (r"\bTP\b|\bTPs\b|\btravaux pratiques\b", "terme proscrit : « TP » (écrire LAB)"),
         (r"(?<![0-9/])\d{1,2}\s*/\s*10(?![0-9/])", "notation /10"),
         (r"forensique reseau", "orthographe : forensique réseau"),

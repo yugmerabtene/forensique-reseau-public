@@ -54,9 +54,9 @@
       "description": "Règle de versioning atomique et gate anti-fuite avant chaque commit"
     },
     ".opencode/scripts/check-course.py": {
-      "status": "created et testé",
+      "status": "créé, testé et corrigé",
       "last_modified": "2026-10-02",
-      "description": "Contrôle structurel complet : planning, durées, modules, LAB, livrables, chaînes, filtres BPF, réseaux"
+      "description": "Contrôle structurel complet : planning, durées, modules, LAB, livrables, chaînes, filtres BPF, réseaux. Motif du terme proscrit « séquence » corrigé le 2026-10-02 : sans frontière de mot, il signalait à tort le mot français « conséquence », ce qui aurait fait échouer les contrôles des jours 2 et 3. Deux autres entrées ont été resserrées : « perte de paquets » et « séquentiel »."
     },
     ".opencode/scripts/check-texte.py": {
       "status": "created et testé",
