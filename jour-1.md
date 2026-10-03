@@ -669,6 +669,8 @@ L’en-tête global décrit les conditions de la capture. Il contient un nombre 
 
 La différence entre ces deux dernières valeurs est le fait technique le plus utile de ce format. Si elles sont égales, le paquet est conservé en entier. Si la seconde est supérieure à la première, le paquet a été tronqué : la capture n’en garde qu’un instantané, et le message complet ne pourra jamais être reconstitué. C’est exactement ce que produit une longueur de capture trop courte.
 
+La lecture de ces six métadonnées se fait sur la capture de référence, qui n’existe qu’à partir de l’étape 3 du LAB de ce chapitre. La commande ci-dessous est donc exécutée à ce moment-là, et non avant : sur un fichier absent, elle ne rendrait rien et laisserait croire à un défaut de l’outil.
+
 ```bash
 capinfos -c -s -d -l -a -e ~/enquete/capture-reference.pcap
 ```
@@ -817,6 +819,10 @@ Le préfixe `sudo` est nécessaire, car la capture brute exige des privilèges a
 L’option `-tttt`, qui impose l’affichage de la date et de l’heure complètes, n’apparaît pas dans cette commande, et la raison mérite d’être signalée. Dès que l’option `-w` est employée, l’outil n’affiche rien, et il inscrit dans le fichier un horodatage déjà absolu, exprimé en secondes écoulées depuis le premier janvier 1970. L’horodatage absolu est donc conservé nativement par le format PCAP, et aucune option supplémentaire n’est nécessaire pour l’obtenir.
 
 Ce que la commande prouve : qu’un fichier de capture existe, qu’il est daté, et qu’il contient le nombre de paquets prévu. Ce qu’elle ne prouve pas : que ce trafic est tout le trafic du segment. L’absence de filtre est délibérée — la capture de référence ne retient rien, et le filtrage se fera à la lecture. Le fichier produit est `~/enquete/capture-reference.pcap`, premier livrable du chapitre.
+
+> **Piège — le compteur commande, l’horloge non.**
+>
+> Lancée seule, cette commande attend indéfiniment : elle s’arrête au troisième centième paquet, non à l’expiration d’un délai, et aucun trafic ne passe sur `eth0` tant que rien ne le produit. Une absence de trafic n’est donc pas une panne, et une capture ne se remplit pas toute seule. L’étape 3 du LAB lève la difficulté en lançant la commande en arrière-plan pendant qu’un trafic connu est produit en parallèle. C’est la seule façon fiable d’obtenir une capture dont on connaît à la fois le volume et l’origine.
 
 > **Piège — le fichier appartient à `tcpdump`, et `sudo` l’écrase sans demander son avis.**
 >

@@ -4,9 +4,9 @@
   "prestataire": "Ascent",
   "lieu": "Paris — présentiel",
   "model": "opencode/big-pickle",
-  "last_updated": "2026-10-03T15:10:00Z",
+  "last_updated": "2026-10-03T16:00:00Z",
   "racine_projet": "/home/yug/Documents/forensics — répertoire depuis lequel opencode est lancé. La configuration d'agents et le dépôt git s'y trouvent directement : opencode ne lit pas une configuration placée dans un sous-répertoire, et un opencode.json ailleurs rend le système agentique invisible sans aucune erreur.",
-  "current_task": "Les trois journées sont rédigées, validées techniquement, relues et poussées. Le contrôleur global annonce « cours conforme ». Restent quatre défauts préexistants signalés par le validateur sur les jours 1 et 2 : une commande tcpdump du jour 1 qui bloque indéfiniment faute de trafic, l'ouverture de Wireshark qui échoue faute d'affichage dans l'image, une capture de référence citée avant d'être créée, et deux livrables du jour 2 scellés avant d'être saisis.",
+  "current_task": "Les trois journées sont rédigées, validées techniquement sur le laboratoire réel, relues et commitées. Le contrôleur global annonce « cours conforme » et les 21 liens des trois journées sont vérifiés. Le validateur technique avait signalé quatre défauts bloquants sur les jours 1 et 2 : après vérification, deux étaient de faux positifs, la commande wireshark est déjà déclarée non exécutable avec repli tshark, et les deux livrables saisis au clavier sont déjà scellés après saisie. Les deux défauts réels ont été corrigés : la capture de référence était lue avant d'être créée, et la technique 1 ne disait pas que sa commande, lancée seule, attend le trafic. Le cours est terminé.",
   "prochaine_tache": "Faire rédiger C4 — M4 Utilisation des journaux et des outils d'analyse réseau (13 h 00 à 16 h, 180 min) par course-writer, qui consomme ~/enquete/anomalies.md et produit ~/enquete/alertes-suricata.txt, puis faire valider l'intégralité de la journée par code-tester sur l'image du laboratoire, et enfin relire par proofreader.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
