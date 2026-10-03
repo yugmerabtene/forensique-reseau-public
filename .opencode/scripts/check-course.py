@@ -420,7 +420,13 @@ def controler_filtres_bpf(fichier, texte):
 
 
 def controler_liens(fichier, texte):
-    liens = re.findall(r"^\| ([^|]+) \| (https?://\S+) \|$", texte, re.M)
+    # L'adresse peut être la dernière colonne d'un tableau à deux colonnes
+    # comme celle d'un tableau plus large qui ajoute une remarque : on la
+    # cherche dans n'importe quelle colonne, après le nom de la ressource.
+    # Les classes excluent aussi le retour à la ligne, sans quoi le motif
+    # déborderait d'une ligne du tableau sur la suivante.
+    liens = re.findall(r"^\| ([^\n|]+) \|(?:[^\n|]*\|)*\s*(https?://[^\s|\n]+)\s*\|",
+                       texte, re.M)
     for nom, url in liens:
         try:
             req = urllib.request.Request(url, method="HEAD",
