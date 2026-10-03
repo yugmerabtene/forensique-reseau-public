@@ -75,6 +75,7 @@ C’est tout l’objet de ce premier chapitre. Il ne demande aucune compétence 
 | Configuration réseau | L’état déclaré d’une machine : ses adresses, ses routes, les ports qu’elle écoute | Partie 2 |
 | Réseau local (LAN) | Un réseau de voisinage, où chaque machine est branchée sur le même segment que ses voisines | Partie 3 |
 | Réseau étendu (WAN) | Un réseau qui relie des sites séparés, où chaque lien franchit un équipement de routage | Partie 3 |
+| TCP | Le protocole qui organise les échanges en sessions fiables, avec accusés de réception et reprises sur erreur ; il est détaillé au chapitre 2 | Partie 3 |
 | Point d’observation | L’endroit précis où l’on prend la copie du trafic | Partie 3 |
 | Empreinte numérique | Une valeur de contrôle calculée sur un fichier, qui change si le fichier change d’un seul octet | Partie 4 |
 | Scellement | L’opération qui consiste à calculer l’empreinte d’une preuve dès sa collecte, afin qu’aucune modification ultérieure ne soit possible | Partie 4 |
@@ -281,14 +282,16 @@ Ce que la sortie prouve : une ouverture de session arrive vers le port 5201 de 1
 
 #### Technique 3 — Sceller un fichier par son empreinte
 
-Ce qu’elle mesure : une valeur de contrôle du fichier, calculée par l’algorithme SHA-256.
+Ce qu’elle mesure : une valeur de contrôle du fichier, calculée par l’algorithme SHA-256. La technique se montre ici sur un fichier d’essai, créé puis scellé dans le même temps : le principe est le même pour un livrable, et la technique 5 produira le livrable du chapitre.
 
 ```bash
-sha256sum ~/enquete/cadre-enquete.md > ~/enquete/cadre-enquete.sha256
-sha256sum -c ~/enquete/cadre-enquete.sha256
+printf '%s\n' "document d'essai, scellé pour la démonstration" > ~/enquete/essai-empreinte.txt
+sha256sum ~/enquete/essai-empreinte.txt > ~/enquete/essai-empreinte.sha256
+sha256sum -c ~/enquete/essai-empreinte.sha256
+rm -f ~/enquete/essai-empreinte.txt ~/enquete/essai-empreinte.sha256
 ```
 
-Ce que la sortie prouve : que le fichier est identique à celui qui a été scellé. Ce qu’elle ne prouve pas : que le contenu est exact ou complet ; une empreinte vérifie l’intégrité, jamais la justesse du fond.
+Ce que la sortie prouve : que le fichier est identique à celui qui a été scellé — la ligne `OK` est la preuve. Les deux fichiers d’essai sont supprimés à la fin de la démonstration : le dossier `~/enquete/` ne contient que les pièces de l’enquête, et les décomptes annoncés aux étapes suivantes restent exacts. Ce qu’elle ne prouve pas : que le contenu est exact ou complet ; une empreinte vérifie l’intégrité, jamais la justesse du fond.
 
 #### Technique 4 — Horodater une acquisition
 
@@ -672,7 +675,7 @@ La différence entre ces deux dernières valeurs est le fait technique le plus u
 La lecture de ces six métadonnées se fait sur la capture de référence, qui n’existe qu’à partir de l’étape 3 du LAB de ce chapitre. La commande ci-dessous est donc exécutée à ce moment-là, et non avant : sur un fichier absent, elle ne rendrait rien et laisserait croire à un défaut de l’outil.
 
 ```bash
-capinfos -c -s -d -l -a -e ~/enquete/capture-reference.pcap
+test -f ~/enquete/capture-reference.pcap && capinfos -c -s -d -l -a -e ~/enquete/capture-reference.pcap || echo "Capture de référence absente : elle sera produite à l'étape 3 du LAB, et cette lecture sera exécutée à cette étape."
 ```
 
 ```text
@@ -779,7 +782,7 @@ Deux sources alimentent cet inventaire, et elles n’ont pas les mêmes limites.
 
 ```bash
 nmap -n -Pn -sT --top-ports 20 10.10.0.30
-tshark -r ~/enquete/capture-reference.pcap -q -z conv,tcp
+test -f ~/enquete/capture-reference.pcap && tshark -r ~/enquete/capture-reference.pcap -q -z conv,tcp || echo "Capture de référence absente : elle sera produite à l'étape 3 du LAB, et cette lecture sera exécutée à cette étape."
 ```
 
 ```text
@@ -806,10 +809,17 @@ Les sept techniques de cette partie mobilisent les six outils de capture et d’
 
 #### Technique 1 — Capturer en ligne de commande avec `tcpdump`
 
-Ce qu’elle mesure : rien. Cette technique ne mesure pas, elle produit. La commande ci-dessous ouvre l’interface `eth0`, écrit chaque paquet reçu dans un fichier au format PCAP, et s’arrête d’elle-même au bout de trois cents paquets.
+Ce qu’elle mesure : rien. Cette technique ne mesure pas, elle produit. Elle ouvre l’interface `eth0`, écrit chaque paquet reçu dans un fichier au format PCAP, et s’arrête d’elle-même au bout de trois cents paquets. Le fichier produit est `~/enquete/capture-reference.pcap`, premier livrable du chapitre, que l’étape 3 du LAB produira et que l’étape 6 du LAB scellera.
+
+Une capture ne se remplit pas toute seule. Le compteur s’arrête au trois centième paquet, et non à l’expiration d’un délai : lancée seule, la commande attendrait indéfiniment qu’un trafic passe sur l’interface. Il faut donc produire ce trafic pendant que la capture est ouverte. C’est ce que fait le client de mesure de débit, lancé en parallèle.
 
 ```bash
-sudo tcpdump -i eth0 -w ~/enquete/capture-reference.pcap -s 0 -n -U -c 300
+sudo tcpdump -i eth0 -w ~/enquete/capture-reference.pcap -s 0 -n -U -c 300 &
+sleep 2
+iperf3 -c 10.10.0.20 -t 8 -P 4 -l 1400 -b 10M
+wait
+sudo chown enqueteur:enqueteur ~/enquete/capture-reference.pcap
+capinfos -c ~/enquete/capture-reference.pcap
 ```
 
 Chaque option a sa raison d’être, et aucune n’est décorative. L’option `-i eth0` désigne l’interface réseau à écouter. L’option `-w` écrit la capture dans un fichier binaire au lieu de l’afficher à l’écran. L’option `-c 300` fixe un terme à l’opération : un fichier de capture doit avoir une taille connue et une fin connue. L’option `-s 0` supprime toute troncature, car le nombre qui suit cette option est la longueur maximale conservée pour chaque paquet, et zéro signifie « longueur totale ». L’option `-n` interdit la résolution des noms : sans elle, l’outil interroge les serveurs de noms pour traduire les adresses, ce qui ralentit la capture et ajoute du trafic parasite au fichier. L’option `-U` demande l’écriture de chaque paquet dans le fichier dès sa réception, de sorte qu’une interruption brutale laisse malgré tout une capture exploitable.
@@ -818,11 +828,11 @@ Le préfixe `sudo` est nécessaire, car la capture brute exige des privilèges a
 
 L’option `-tttt`, qui impose l’affichage de la date et de l’heure complètes, n’apparaît pas dans cette commande, et la raison mérite d’être signalée. Dès que l’option `-w` est employée, l’outil n’affiche rien, et il inscrit dans le fichier un horodatage déjà absolu, exprimé en secondes écoulées depuis le premier janvier 1970. L’horodatage absolu est donc conservé nativement par le format PCAP, et aucune option supplémentaire n’est nécessaire pour l’obtenir.
 
-Ce que la commande prouve : qu’un fichier de capture existe, qu’il est daté, et qu’il contient le nombre de paquets prévu. Ce qu’elle ne prouve pas : que ce trafic est tout le trafic du segment. L’absence de filtre est délibérée — la capture de référence ne retient rien, et le filtrage se fera à la lecture. Le fichier produit est `~/enquete/capture-reference.pcap`, premier livrable du chapitre.
+Ce que la commande prouve : qu’un fichier de capture existe, qu’il est daté, et qu’il contient exactement le nombre de paquets demandé — la dernière ligne l’annonce, et elle doit afficher trois cents. Ce qu’elle ne prouve pas : que ce trafic est tout le trafic du segment. L’absence de filtre est délibérée — la capture ne retient rien, et le filtrage se fera à la lecture. Le fichier produit est `~/enquete/capture-reference.pcap`, premier livrable du chapitre, que l’étape 6 du LAB scellera.
 
 > **Piège — le compteur commande, l’horloge non.**
 >
-> Lancée seule, cette commande attend indéfiniment : elle s’arrête au troisième centième paquet, non à l’expiration d’un délai, et aucun trafic ne passe sur `eth0` tant que rien ne le produit. Une absence de trafic n’est donc pas une panne, et une capture ne se remplit pas toute seule. L’étape 3 du LAB lève la difficulté en lançant la commande en arrière-plan pendant qu’un trafic connu est produit en parallèle. C’est la seule façon fiable d’obtenir une capture dont on connaît à la fois le volume et l’origine.
+> Une capture s’arrête sur un compte de paquets, jamais sur une horloge. C’est pourquoi le trafic doit être produit pendant que la capture est ouverte : sans le `sleep 2`, la mesure démarrerait trop tôt et la capture ne contiendrait aucune ouverture de session. Une commande de capture ne se relance pas pour autant sur un fichier déjà scellé : elle le réécrit depuis la première ligne, sans laisser de trace. C’est pourquoi l’étape 6 du LAB scelle la capture et en vérifie l’empreinte avant de rendre le fichier.
 
 > **Piège — le fichier appartient à `tcpdump`, et `sudo` l’écrase sans demander son avis.**
 >
@@ -886,7 +896,7 @@ Ce qu’elle mesure : le débit atteint entre deux machines, et elle fournit sur
 iperf3 -c 10.10.0.20 -t 10 -P 4 -l 1400 -b 10M
 ```
 
-L’option `-c` désigne le serveur, l’option `-t` fixe la durée en secondes, et l’option `-P` ouvre plusieurs connexions parallèles afin de remplir la capture. Les deux dernières options ne servent pas au débit mais à la capture : `-l 1400` fixe la taille des blocs de données à 1 400 octets, et `-b 10M` limite le débit à 10 Mbit/s. Sans elles, le poste envoie des paquets de plus de 65 000 octets, que le noyau de la machine réceptrice abandonne avant de les écrire : il en écarte 1 477 sur les 1 777 qu’il reçoit, et la capture de référence n’en retient que 300. Avec elles, la capture ne perd rien et contient des paquets de taille réaliste. L’outil mesure le débit et l’affiche à la fin de l’essai.
+L’option `-c` désigne le serveur, l’option `-t` fixe la durée en secondes, et l’option `-P` ouvre plusieurs connexions parallèles afin de remplir la capture. Les deux dernières options ne servent pas au débit mais à la capture : `-l 1400` fixe la taille des blocs de données à 1 400 octets, et `-b 10M` limite le débit à 10 Mbit/s. L’option `-l 1400` fait tenir chaque segment dans un cadre Ethernet ordinaire, de 1 500 octets : la capture se lit alors paquet par paquet, sans dépendre d’un reassemblage. L’option `-b 10M` borne le débit, et la capture de référence en retient trois cents paquets — un volume que l’enquêteur peut survoler, et non un flot qu’il doit filtrer. L’outil mesure le débit et l’affiche à la fin de l’essai.
 
 Ce que la sortie prouve : qu’une session a été ouverte vers le port 5201 de 10.10.0.20, et qu’un volume connu y a circulé pendant dix secondes. Ce qu’elle ne prouve pas : rien du tout sur l’incident étudié. Cet usage est purement méthodologique : il donne à la capture un repère identifiable, sans lequel il serait impossible de vérifier que l’outil de capture écrit bien ce qu’il annonce.
 
@@ -997,7 +1007,7 @@ sudo chown enqueteur:enqueteur ~/enquete/capture-reference.pcap
 ls -l ~/enquete/capture-reference.pcap
 ```
 
-Le signe `&` place la première commande en arrière-plan : la capture commence, et le terminal reste disponible pour la commande suivante. La pause de deux secondes est indispensable : elle laisse à la capture le temps de s’installer avant que le trafic ne parte. Sans elle, la mesure démarre trop tôt et la capture ne contient aucune ouverture de session, alors que l’étape 4 en cherche précisément. Ce défaut a été constaté lors de la préparation de ce chapitre : le fichier ne contenait alors aucun segment d’ouverture, et la quatrième commande de l’étape 4 ne renvoyait aucune ligne. Le client de mesure de débit est ensuite lancé pendant dix secondes, sur quatre connexions parallèles, ce qui remplit la capture d’un volume connu. Les options `-l 1400` et `-b 10M` y figurent pour une raison mesurée : sans elles, les paquets dépassent 65 000 octets, le noyau de la machine réceptrice en abandonne 1 477 sur les 1 777 qu’il reçoit, et la capture n’en retient que 300. La commande `wait` attend la fin des deux processus.
+Le signe `&` place la première commande en arrière-plan : la capture commence, et le terminal reste disponible pour la commande suivante. La pause de deux secondes est indispensable : elle laisse à la capture le temps de s’installer avant que le trafic ne parte. Sans elle, la mesure démarre trop tôt et la capture ne contient aucune ouverture de session, alors que l’étape 4 en cherche précisément. Ce défaut a été constaté lors de la préparation de ce chapitre : le fichier ne contenait alors aucun segment d’ouverture, et la quatrième commande de l’étape 4 ne renvoyait aucune ligne. Le client de mesure de débit est ensuite lancé pendant dix secondes, sur quatre connexions parallèles, ce qui remplit la capture d’un volume connu. Les options `-l 1400` et `-b 10M` y figurent pour deux raisons : la première fait tenir chaque segment dans un cadre Ethernet ordinaire, donc la capture se lit paquet par paquet ; la seconde borne le débit, donc la capture n’en retient qu’un volume de trois cents paquets. La commande `wait` attend la fin des deux processus.
 
 Un point mérite d’être compris ici, car il revient dans tout travail d’enquête. C’est le compteur de trois cents paquets, et non l’horloge, qui fixe la fin du fichier : sur un lien local, les trois cents paquets sont reçus en quelques fractions de seconde, et la capture s’arrête donc bien avant la dixième seconde de la mesure. Une capture a ainsi toujours une fin connue à l’avance et vérifiable après coup, ce qui est la règle. Le fichier ne contient donc pas toute la mesure de débit, mais son début, ce qui suffit largement à fournir un contenu de référence identifiable.
 
@@ -1030,11 +1040,11 @@ L’inventaire est le document qui survivra à la lecture de la capture. Il est 
 
 ```bash
 cat > ~/enquete/inventaire-hotes.txt <<'INVENTAIRE'
-Inventaire des hotes, ports et protocoles observes
-Redige apres la capture, jamais pendant la sonde.
-Colonne source : sonde pour un etat de port, capture pour un dialogue observe.
+Inventaire des hôtes, ports et protocoles observés
+Rédigé après la capture, jamais pendant la sonde.
+Colonne source : sonde pour un état de port, capture pour un dialogue observé.
 
-Hote                Adresse      Port  Proto  Etat      Source   Heure UTC
+Hôte                Adresse      Port  Proto  État      Source   Heure UTC
 serveur applicatif   10.10.0.20   22    TCP    observe   sonde    A_COMPLETER
 serveur applicatif   10.10.0.20   80    TCP    observe   sonde    A_COMPLETER
 serveur applicatif   10.10.0.20   443   TCP    observe   sonde    A_COMPLETER
@@ -1046,10 +1056,10 @@ collecteur           10.10.0.50   514   UDP    incertain sonde    A_COMPLETER
 serveur de filiale   10.20.0.20   22    TCP    observe   sonde    A_COMPLETER
 serveur de filiale   10.20.0.20   80    TCP    observe   sonde    A_COMPLETER
 
-Observations a completer par l enqueteur, une par ligne :
-- Interpretation du port 23 : reservee au jour 2, ne rien ecrire ici.
-- Port 514 en UDP : la sonde ne peut pas le confirmer, elle ne distingue pas ouvert de filtre.
-- Le poste compromis n a pas ete sonde : quelle raison l explique ?
+Observations à compléter par l'enquêteur, une par ligne :
+- Interprétation du port 23 : réservée au jour 2, ne rien écrire ici.
+- Port 514 en UDP : la sonde ne peut pas le confirmer, elle ne distingue pas un port ouvert d'un port filtré.
+- Le poste compromis n'a pas été sondé : quelle raison l'explique ?
 INVENTAIRE
 ```
 
@@ -1085,7 +1095,7 @@ Les deux premières commandes écrivent l’empreinte de chaque livrable dans un
 | Le fichier de capture a été réécrit sans aucun message, alors qu’il était scellé | `tcpdump` abandonne ses privilèges, donc `sudo` n’empêche pas l’écrasement d’un fichier qui appartient au compte `tcpdump` | Reprendre la capture vers un fichier neuf, puis vérifier l’empreinte avec `sha256sum -c ~/enquete/capture-reference.pcap.sha256` |
 | La capture ne s’arrête pas et le terminal semble figé | L’option `-c` a été omise, donc aucun terme n’a été fixé | Interrompre par la combinaison `Ctrl` et `C`, puis relancer avec `-c 300` |
 | La capture ne contient aucun segment d’ouverture de session | La mesure de débit a été lancée avant que la capture soit armée | Placer `sleep 2` entre les deux commandes, puis relancer l’étape 3 |
-| Le fichier de capture pèse plusieurs mégaoctets et annonce des paquets de 65 000 octets | Les options `-l 1400` et `-b 10M` ont été omises, et le noyau de la machine réceptrice abandonne les trames trop longues | Ajouter les deux options à la commande `iperf3`, puis relancer l’étape 3 |
+| Le fichier de capture pèse plusieurs mégaoctets | L’option `-b 10M` a été omise : la mesure de débit se poursuit sans plafond, et le volume capturé dépasse alors largement les trois cents paquets attendus | Ajouter `-b 10M` à la commande `iperf3`, puis relancer l’étape 3 |
 | La mesure de débit échoue sur la connexion refusée | Le serveur `iperf3` ne répond pas sur le port 5201 | Vérifier l’adressage, puis relancer la mesure seule |
 | Le fichier de capture est vide après une interruption brutale | L’écriture immédiate n’a pas été demandée | Ajouter l’option `-U` à la commande de capture |
 | `sha256sum: ~/enquete/capture-reference.pcap.sha256: No such file` | Le fichier d’empreinte n’existe pas encore, parce que l’étape 6 n’a pas été exécutée ; ou il a été produit par une commande `sudo` et porte un nom différent de celui attendu | Rejouer l’étape 6 pour produire `~/enquete/capture-reference.pcap.sha256`, puis contrôler son nom avec `ls -l ~/enquete` avant de relancer la vérification |

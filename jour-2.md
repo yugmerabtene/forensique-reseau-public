@@ -73,7 +73,7 @@ La différence entre ce trafic et le trafic de l’incident est l’adresse qui 
 | Reconnaissance | Le travail qui consiste à cartographier un réseau avant de l’attaquer ; la base de données MITRE ATT&CK le nomme Network Service Scanning, identifiant T1046 | Partie 2 |
 | Segment d’ouverture | Le premier paquet d’une connexion TCP, qui porte l’indicateur SYN ; il demande l’ouverture et attend un accusé | Partie 2 |
 | Déni de service | Une attaque dont le but est de rendre un service indisponible en consommant une ressource ; le sigle DDoS, pour Distributed Denial of Service, en désigne la variante où plusieurs machines frappent ensemble | Partie 3 |
-| ICMP | Le protocole de contrôle des messages Internet, décrit par la RFC 792, qui transporte notamment les demandes d’écho utilisées pour vérifier qu’une machine répond | Partie 3 |
+| ICMP | Le protocole de contrôle des messages Internet, décrit par la RFC 792 — une RFC, pour Request For Comments, est la publication qui fait norme sur un protocole — qui transporte notamment les demandes d’écho utilisées pour vérifier qu’une machine répond | Partie 3 |
 | Flot de paquets | Un grand nombre de paquets du même type, envoyés vers la même destination en très peu de temps | Partie 3 |
 | Intrusion | L’usage d’un accès réel par quelqu’un qui n’y était pas autorisé | Partie 4 |
 | Telnet | Un protocole de session distante qui ne chiffre rien : ni l’identifiant ni le mot de passe ne sont protégés sur le réseau | Partie 4 |
@@ -332,7 +332,7 @@ La première produit le balayage de ports. L’option `-n` interdit la résoluti
 
 La deuxième produit la session en clair. La commande `printf` écrit deux lignes terminées par les deux caractères de fin de ligne du réseau, un retour chariot suivi d’une fin de ligne ; la commande `nc` envoie cette suite au port 23 et lit ce que le serveur renvoie ; la commande `timeout` met fin à l’opération au bout de huit secondes, car le service en clair du laboratoire ne ferme pas la session de lui-même. La redirection vers `/dev/null` évite d’afficher l’invite à l’écran : l’invite est dans la capture, et c’est là qu’elle doit être observée. Cette commande est exécutée deux fois de suite, comme le fait le scénario de l’incident, et les deux valeurs envoyées sont des valeurs de laboratoire, jamais celles d’un système réel.
 
-La troisième produit l’accès à un partage. L’option `-U` transmet le compte et le mot de passe du partage, séparés par un caractère pourcent ; l’option `-c` donne la commande à exécuter sur le partage, ici une simple liste. Le compte et le mot de passe sont ceux du laboratoire, décrits dans le tableau d’environnement.
+La troisième produit l’accès à un partage. L’option `-U` transmet le compte et le mot de passe du partage, séparés par un caractère pourcent ; l’option `-c` donne la commande à exécuter sur le partage, ici une simple liste. Le compte et le mot de passe sont ceux du laboratoire : `enquete` et `lab-2026`, repris dans le tableau d’environnement.
 
 La quatrième produit le flot de paquets. L’option `-c` fixe le nombre de demandes d’écho, l’option `-i` l’intervalle entre deux demandes, et le préfixe `sudo` accorde les privilèges que certaines versions de l’outil exigent pour un intervalle inférieur à un cinquième de seconde. Deux cents demandes à vingt par seconde pendant dix secondes donnent un volume que l’on peut compter sans approximation.
 
@@ -373,12 +373,21 @@ Ce que la sortie prouve : que le flot n’est pas un pic isolé, mais une répé
 
 Ce qu’elle mesure : l’identité numérique du fichier, qui garantit qu’il ne sera plus modifié.
 
+On ne scelle jamais une capture ouverte. Tant que `tcpdump` écrit, le fichier n’est pas une preuve mais un chantier : il s’allonge à chaque paquet, et l’empreinte changerait à la seconde près. La première commande arrête donc proprement la capture ouverte par la technique 2, la deuxième lui rend sa propriété, et les deux suivantes scellent et décrivent le fichier désormais fermé.
+
 ```bash
+sudo pkill -INT -x tcpdump
+sleep 3
+sudo chown enqueteur:enqueteur ~/enquete/anomalies.pcap
 sha256sum ~/enquete/anomalies.pcap
 capinfos ~/enquete/anomalies.pcap
 ```
 
-Ce que la sortie prouve : qu’une empreinte existe et que le fichier est complet. Ce qu’elle ne prouve pas : que le fichier est authentique. Une empreinte atteste qu’un fichier est identique à celui qui a été scellé ; elle ne dit pas d’où il vient. Cette nuance est réservée au chapitre 6.
+> **Piège — deux captures sur le même fichier.**
+>
+> Une capture ouverte ne se rouvre pas. Le second `tcpdump` n’écrit pas à la suite du premier : il écrit au même endroit, à partir de la position courante, et le fichier devient illisible. Les outils de lecture ne signalent pas un détail superflu, ils annoncent un fichier endommagé, ce qui est un constat bien plus grave qu’un fichier vide. C’est pourquoi la capture est fermée ici, et pourquoi l’étape 3 du LAB peut ensuite rouvrir le même nom sans risquer de l’abîmer.
+
+Ce que la sortie prouve : que la capture est fermée, qu’une empreinte existe et que le fichier est complet. Ce qu’elle ne prouve pas : que le fichier est authentique. Une empreinte atteste qu’un fichier est identique à celui qui a été scellé ; elle ne dit pas d’où il vient. Cette nuance est réservée au chapitre 6.
 
 **Technique 7 — Comparer avec l’inventaire du premier jour**
 
@@ -410,6 +419,7 @@ Si l’un des trois fichiers manque, ou si l’empreinte ne correspond plus, il 
 | Poste de l’enquêteur | `10.10.0.10` (site central), `10.20.0.30` (filiale) |
 | Interface d’observation | `eth0`, segment `10.10.0.0/24` |
 | Serveur de fichiers | `10.10.0.30` — port 23 en clair, ports 139 et 445 ouverts |
+| Partage de fichiers | `partage` sur `10.10.0.30` — compte `enquete`, mot de passe `lab-2026` |
 | Serveur applicatif | `10.10.0.20` — ports 22, 80, 443 |
 | Collecteur de journaux | `10.10.0.50` — syslog sur 514 |
 | Poste compromis | `10.20.0.10` (filiale), `10.10.0.60` (site central) |
@@ -513,7 +523,7 @@ smbclient //10.10.0.30/partage -U 'enquete%lab-2026' -c 'ls'
 
 > **Résultat attendu :** la commande rend la liste des fichiers du partage, dont `lisezmoi.txt`, avec pour chacun une taille et une date. Le protocole SMB, celui qui porte les partages de fichiers, est employé ici en clair : la liste obtenue prouve que l’authentification a réussi. Un partage accessible en clair ne demande aucun déchiffrement pour être consulté, et c’est ce qui le rend inacceptable sur un segment d’enquête.
 
-Si le partage est refusé, vérifier que le compte du tableau d’environnement est bien `enquete` et que le mot de passe est `lab-2026`. Un refus d’authentification est un constat d’enquête, pas un échec du LAB : il se note et se poursuit.
+Si le partage est refusé, vérifier que le compte est bien `enquete` et que le mot de passe est `lab-2026`. Un refus d’authentification est un constat d’enquête, pas un échec du LAB : il se note et se poursuit.
 
 **Étape 7 — Reproduire le flot de paquets ICMP (3min)**
 
@@ -593,6 +603,12 @@ Ce que cette étape produit : `~/enquete/anomalies.md`, le livrable que le chapi
 
 Ouvrir un éditeur et produire le fichier selon le gabarit suivant, en reprenant les horaires réels des étapes 4 à 7 et les nombres réellement comptés aux étapes 8 et 9. Les valeurs ne doivent pas être reprises d’un exemple : elles doivent venir des sorties obtenues.
 
+```bash
+nano ~/enquete/anomalies.md
+```
+
+L’éditeur crée le fichier s’il n’existe pas encore. Le gabarit ci-dessous sert de plan : chaque ligne entre chevrons est à remplacer par une valeur réellement lue aux étapes précédentes.
+
 ```markdown
 # Anomalies observées — laboratoire Forensique réseau
 
@@ -631,12 +647,15 @@ Filtre : icmp and dst host 10.10.0.20
 - Le port 23 est en clair : les identifiants figurent dans la capture et ne doivent pas être reproduits dans un rapport.
 ```
 
-Puis sceller le fichier rédigé lui-même, puisqu’il fait partie de la chaîne de conservation :
+Puis sceller le fichier rédigé lui-même, puisqu’il fait partie de la chaîne de conservation. La première commande vérifie que le fichier a bien été enregistré : tant qu’elle affiche `ABSENT`, le scellement ne peut pas aboutir.
 
 ```bash
+test -f ~/enquete/anomalies.md && echo "Fichier présent : anomalies.md" || echo "ABSENT : enregistrez le fichier rédigé sous ~/enquete/anomalies.md avant de poursuivre."
 sha256sum ~/enquete/anomalies.md | tee ~/enquete/anomalies.md.sha256
 cat ~/enquete/anomalies.md.sha256 ~/enquete/anomalies.pcap.sha256
 ```
+
+> **Dépannage :** si le bloc affiche `ABSENT`, le fichier `anomalies.md` n’est pas encore enregistré sous ce nom. Enregistrer le texte rédigé dans `~/enquete/anomalies.md`, puis relancer le bloc : on ne scelle pas un fichier absent.
 
 > **Résultat attendu :** les deux fichiers d’empreinte s’affichent côte à côte : deux lignes de soixante-quatre caractères, suivies respectivement des noms `anomalies.md` et `anomalies.pcap`. Le fichier rédigé contient les quatre anomalies, chacune avec son identifiant de technique, ses valeurs et le filtre qui la reproduit ; aucun champ entre chevrons n’a subsisté, et aucune valeur n’a été reprise d’un exemple.
 
@@ -710,7 +729,7 @@ L’enjeu du chapitre est donc concret. L’enquêteur doit apprendre à lire tr
 | Alerte | Le signal émis parce qu’une règle a été satisfaite, et qui porte l’instant et le responsable | Les événements de type `alert` du journal du détecteur |
 | Nom NetBIOS | L’ancien nom court d’une machine sur un réseau local, antérieur à la résolution par adresse | `[LAB-COMPROMIS]`, la seule identification de l’intrus dans le journal du serveur de fichiers |
 | Recoupement | La confrontation de deux sources indépendantes sur un même événement | La capture du chapitre 3 et les journaux du jour |
-| Pont de commutation | L’appareil qui relie le poste compromis au site central et qui transmet le trafic unicast vers un seul destinataire tant que sa table d’adresses le permet | Le poste compromis `10.20.0.10`, relié par sa seconde interface `10.20.0.30` |
+| Pont de commutation | L’appareil qui relie le poste compromis au site central et qui transmet le trafic unicast vers un seul destinataire tant que sa table d’adresses le permet | Le poste compromis `10.20.0.10`, relié au site central par sa seconde interface `10.10.0.60` |
 | JSON | Le format de données textuel et structuré, une donnée par ligne entre accolades, que les outils modernes écrivent et relisent sans table de conversion | Le journal `eve.json` du moteur de détection |
 | Repli exécutable | Une autre méthode, réellement applicable dans l’environnement, quand un outil annoncé manque | Le journal au format JSON du moteur de détection, qui tient lieu de Zeek |
 
@@ -923,7 +942,7 @@ suricata -T -c /etc/suricata/suricata.yaml -S /home/enqueteur/enquete/regle-essa
 grep 'rules successfully loaded' ~/enquete/verification/suricata.log
 ```
 
-La première commande écrit une règle qui signale toute session vers le port 23 du serveur de fichiers. La deuxième crée le dossier qui recevra les fichiers de vérification. La troisième demande à Suricata de vérifier la configuration et les règles sans rien observer : l’option `-T` est le mode de vérification, l’option `-S` majuscule fournit un fichier de règles qui remplace l’ensemble des règles, l’option `-l` désigne le dossier de sortie, et l’option `-c` désigne la configuration générale. La quatrième va chercher la ligne qui dit combien de règles ont été chargées et combien ont échoué.
+La première commande écrit une règle qui signale toute session vers le port 23 du serveur de fichiers. Une règle Suricata s’écrit toujours de la même façon : l’action d’abord — ici `alert`, qui demande une alerte — puis les deux points de la session, puis la direction `->`, puis la destination, puis la condition, puis les métadonnées entre parenthèses. Ces métadonnées ne servent pas à détecter : elles décrivent la règle. `msg` porte le libellé lisible qui apparaîtra dans l’alerte, `sid` son numéro d’identification, et `rev` son numéro de version, qu’on augmente quand la règle est modifiée. La deuxième crée le dossier qui recevra les fichiers de vérification. La troisième demande à Suricata de vérifier la configuration et les règles sans rien observer : l’option `-T` est le mode de vérification, l’option `-S` majuscule fournit un fichier de règles qui remplace l’ensemble des règles, l’option `-l` désigne le dossier de sortie, et l’option `-c` désigne la configuration générale. La quatrième va chercher la ligne qui dit combien de règles ont été chargées et combien ont échoué.
 
 Ce que la sortie prouve : que la règle est syntaxiquement valide. Une règle valide donne une ligne qui annonce une règle chargée et zéro règle en échec. La commande produit par ailleurs quatre fichiers dans le dossier de vérification, dont `suricata.log`. Un avertissement relatif à un cache de recherche de signatures apparaît alors systématiquement : il est dû au fait que l’enquêteur travaille en compte ordinaire et ne peut pas écrire dans un dossier système, et il n’a aucune conséquence sur la vérification.
 
@@ -1048,6 +1067,12 @@ Ce que la sortie doit montrer : la vérification se termine sans message d’éc
 
 Le livrable est un fichier rédigé par l’enquêteur, en français, à partir du modèle ci-dessous. Il ne contient aucune sortie d’outil recopiée : chaque ligne est reformulée, et seules les lignes significatives sont conservées. La commande `printf` de l’étape 5 a produit la matière ; l’enquêteur la met en forme lui-même.
 
+```bash
+nano ~/enquete/alertes-suricata.txt
+```
+
+L’éditeur crée le fichier s’il n’existe pas encore. Le gabarit ci-dessous sert de plan : chaque ligne entre chevrons est à remplacer par une valeur réellement lue aux étapes précédentes.
+
 ```text
 # Alertes du moteur de détection — laboratoire Forensique réseau
 
@@ -1091,6 +1116,7 @@ détecteur. Porter l'écart au dossier sans le trancher.>
 Une fois le fichier rédigé et enregistré sous le nom `~/enquete/alertes-suricata.txt`, l’enquêteur scelle le livrable et le consigne. L’ordre des quatre commandes compte : l’empreinte est calculée une fois, sur le fichier définitif, et l’écriture au journal des acquisitions vient après.
 
 ```bash
+test -f ~/enquete/alertes-suricata.txt && echo "Fichier présent : alertes-suricata.txt" || echo "ABSENT : enregistrez le fichier rédigé sous ~/enquete/alertes-suricata.txt avant de poursuivre."
 sha256sum ~/enquete/alertes-suricata.txt > ~/enquete/alertes-suricata.txt.sha256
 sha256sum -c ~/enquete/alertes-suricata.txt.sha256
 printf '%s | %s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "alertes-suricata.txt" "$(cut -c1-64 ~/enquete/alertes-suricata.txt.sha256)" >> ~/enquete/journal-acquisition.txt
@@ -1101,7 +1127,7 @@ La première commande écrit l’empreinte dans un fichier séparé. La deuxièm
 
 > **Résultat attendu :** la commande de vérification répond que le fichier est conforme. Le livrable ne contient aucune ligne d’empreinte : un fichier ne peut pas contenir sa propre empreinte, et l’ajouter après le scellement rendrait l’empreinte fausse. Un enquêteur qui ajoute une ligne au livrable après avoir calculé son empreinte détruit la preuve qu’il vient d’établir ; la règle est donc : sceller en dernier.
 
-**Dépannage :** si la vérification échoue, le livrable a été modifié après scellement. Recalculer l’empreinte et la consigner de nouveau, et noter la modification dans le journal des acquisitions. Si le journal des acquisitions n’existe pas, il appartient au premier jour : son absence signifie que le cadre d’enquête n’a pas été produit, et le LAB ne peut pas être validé.
+**Dépannage :** si le bloc affiche `ABSENT`, le fichier `alertes-suricata.txt` n’est pas encore enregistré sous ce nom ; l’enregistrer dans `~/enquete/`, puis relancer le bloc. Si la vérification échoue ensuite, le livrable a été modifié après scellement. Recalculer l’empreinte et la consigner de nouveau, et noter la modification dans le journal des acquisitions. Si le journal des acquisitions n’existe pas, il appartient au premier jour : son absence signifie que le cadre d’enquête n’a pas été produit, et le LAB ne peut pas être validé.
 
 ### Ce que ce LAB produit
 
