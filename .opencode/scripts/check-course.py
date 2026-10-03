@@ -186,6 +186,10 @@ def controler_planning(fichier, texte):
     if not section:
         fail(fichier, "section « Planning du Jour » absente")
         return {}
+    # La numérotation des chapitres est continue sur les trois journées : elle
+    # se déduit des modules attendus du jour, et non d'une liste figée sur le
+    # premier jour.
+    attendus = ["C" + m[1:] for m in MODULES_ATTENDUS[fichier]]
     for ligne in section.group(1).split("\n"):
         if re.match(r"^\| C\d( \(suite\))? \|", ligne) or re.match(r"^\| — \|", ligne):
             lignes.append(ligne)
@@ -233,8 +237,9 @@ def controler_planning(fichier, texte):
     if volume != 360:
         fail(fichier, f"volume pédagogique {volume} min (attendu 360 = 6 h "
                       f"de formation)")
-    if [c[0] for c in plan] != ["C1", "C2"]:
-        fail(fichier, f"numérotation des chapitres : {[c[0] for c in plan]}")
+    if [c[0] for c in plan] != attendus:
+        fail(fichier, f"numérotation des chapitres : {[c[0] for c in plan]} "
+                      f"(attendu {attendus})")
     return creneaux
 
 
@@ -324,10 +329,14 @@ def controler_chapitres(fichier, texte, creneaux, livrables):
     if modules_trouves != MODULES_ATTENDUS[fichier]:
         fail(fichier, f"numérotation des modules : {modules_trouves} "
                       f"(attendu {MODULES_ATTENDUS[fichier]})")
-    # Couverture finale : les deux chapitres du jour, dans l'ordre.
+    # Couverture finale : les deux chapitres du jour, dans l'ordre. Les
+    # chapitres attendus se déduisent des modules attendus de la journée, et
+    # non d'une liste figée sur le premier jour.
+    attendus = ["C" + m[1:] for m in MODULES_ATTENDUS[fichier]]
     couv = re.findall(r"^\| (C\d) \| (M\d)", texte, re.M)
-    if [c for c, _ in couv] != ["C1", "C2"]:
-        fail(fichier, f"synthèse : couverture {[c for c, _ in couv]}")
+    if [c for c, _ in couv] != attendus:
+        fail(fichier, f"synthèse : couverture {[c for c, _ in couv]} "
+                      f"(attendu {attendus})")
 
 
 def controler_fil(fichier, texte, livrables):
