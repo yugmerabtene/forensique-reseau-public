@@ -4,9 +4,9 @@
   "prestataire": "Ascent",
   "lieu": "Paris — présentiel",
   "model": "opencode/big-pickle",
-  "last_updated": "2026-10-03T11:40:00Z",
+  "last_updated": "2026-10-03T14:20:00Z",
   "racine_projet": "/home/yug/Documents/forensics — répertoire depuis lequel opencode est lancé. La configuration d'agents et le dépôt git s'y trouvent directement : opencode ne lit pas une configuration placée dans un sous-répertoire, et un opencode.json ailleurs rend le système agentique invisible sans aucune erreur.",
-  "current_task": "Journée 3 rédigée et validée techniquement le 2026-10-03 : squelette, C5 (M5), C6 (M6) et synthèse. Le contrôleur check-course.py a été complété : il n'extrait les liens que des tableaux à deux colonnes, de sorte que les références du jour 2, rédigées en liste, n'étaient jamais vérifiées ; il cherche désormais l'adresse dans n'importe quelle colonne, et les 21 liens des trois journées sont contrôlés. Restent des défauts préexistants signalés sur les jours 1 et 2, à traiter.",
+  "current_task": "Les trois journées sont rédigées et le contrôleur global annonce « cours conforme ». Restent la relecture finale du jour 3, puis le traitement des défauts préexistants signalés sur les jours 1 et 2 par le validateur technique : une commande tcpdump du jour 1 qui bloque indéfiniment, l'ouverture de Wireshark qui échoue faute d'affichage dans l'image, une capture de référence citée avant d'être créée, et deux livrables du jour 2 scellés avant d être saisis.",
   "prochaine_tache": "Faire rédiger C4 — M4 Utilisation des journaux et des outils d'analyse réseau (13 h 00 à 16 h, 180 min) par course-writer, qui consomme ~/enquete/anomalies.md et produit ~/enquete/alertes-suricata.txt, puis faire valider l'intégralité de la journée par code-tester sur l'image du laboratoire, et enfin relire par proofreader.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
@@ -129,9 +129,9 @@
       "description": "Journée 2 du 13 octobre 2026. C3 — M3 Analyse des paquets et détection des anomalies, 180 min, 9 h 00 à 12 h 00 : 673 lignes rédigées le 2026-10-02, en-tête de journée, préambule, vocabulaire, sept techniques, LAB de 50 min en onze étapes, production de ~/enquete/anomalies.md. En cours : C4 — M4 Utilisation des journaux et des outils d'analyse réseau, 180 min, 13 h 00 à 16 h 00, à produire, qui consomme anomalies.md et produit ~/enquete/alertes-suricata.txt. Journée terminée le 2026-10-03 : C3 (M3) et C4 (M4), deux LAB, 17 blocs de résultat attendu, minutage 12+58+40+50+20 et 12+58+33+52+25, soit 180 minutes par chapitre. Le fil du chapitre 4 a été réécrit après la réparation du scénario : la règle de balayage se déclenche bien depuis 10.10.0.60, une partie des alertes vient des reproductions de l'enquêteur lui-même, et le véritable angle mort est le balayage de la filiale, que le détecteur ne peut pas voir parce qu'il n'observe que l'interface du site central. Validé par code-tester sur le laboratoire réel, relu par proofreader, les quatre contrôleurs du dépôt renvoyant 0."
     },
     "jour-3.md": {
-      "status": "à produire",
+      "status": " Redige et valide le 2026-10-03, en attente de relecture",
       "last_modified": "2026-10-02",
-      "description": "C5 — M5 Réponse aux incidents de sécurité réseau (3 h) et C6 — M6 Rédaction du rapport d'enquête réseau (3 h)"
+      "description": "C5 — M5 Réponse aux incidents de sécurité réseau (3 h) et C6 — M6 Rédaction du rapport d'enquête réseau (3 h) Journée produite le 2026-10-03 : squelette, chapitre C5 (M5, réponse à l'incident), chapitre C6 (M6, rapport d'enquête) et synthèse. C5 : 12+56+34+48+30 = 180 minutes, six techniques, LAB de six étapes et livrable ~/enquete/chronologie-incident.md. C6 : 12+56+32+50+30 = 180 minutes, cinq techniques, LAB de six étapes et livrable ~/enquete/rapport-enquete.md. Validé par code-tester sur le laboratoire réel après vingt corrections : écart journal-alerte, tenue du compteur sur une capture en cours d'écriture, double ouverture d'une même capture, ordre de tri d'une liste de fichiers, et plusieurs options de commandes. Reste la relecture finale."
     }
   },
   "progress": {
