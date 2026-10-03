@@ -1197,8 +1197,13 @@ Les deux chapitres couvrent les six heures de la journée, sans empiétement : l
 
 ### Références
 
-- RFC 5424, format syslog des entrées de journal, à l’adresse `https://www.rfc-editor.org/rfc/rfc5424.html`.
-- MITRE ATT&CK, référentiel des techniques et des tactiques d’intrusion, à l’adresse `https://attack.mitre.org/`. Quatre techniques sont mobilisées dans ce chapitre et le précédent : la découverte de service réseau, l’accès au partage de fichiers, l’accès à distance en clair, le déni de service par flot réseau.
-- Agence nationale de la sécurité des systèmes d’information, recommandations sur la conservation des preuves numériques, à l’adresse `https://cyber.gouv.fr/`.
-- Documentation officielle du moteur de détection, journal au format JSON et mode de vérification des règles, à l’adresse `https://docs.suricata.io/`.
-- Site officiel de Zeek, à l’adresse `https://zeek.org/`, et site officiel de Splunk, à l’adresse `https://www.splunk.com/`. Ces deux outils ne sont pas dans l’image du laboratoire ; le chapitre 4 a donné, pour chacun, la marche à suivre d’installation et le repli exécutable.
+Chaque lien ci-dessous a été ouvert et vérifié au jour de la rédaction du support. Les manuels donnent l'explication complète d'une option ; les références consacrées au format syslog et au format JSON décrivent la structure des fichiers que le chapitre manipule, ce qui est la référence utile quand un journal doit être contesté.
+
+| Référence | Adresse | Remarque |
+|---|---|---|
+| RFC 5424, format syslog des entrées de journal | https://www.rfc-editor.org/rfc/rfc5424.html | Structure des lignes du journal rassemblé |
+| MITRE ATT&CK | https://attack.mitre.org/ | Référentiel des techniques d'intrusion citées dans les chapitres 3 et 4 |
+| Agence nationale de la sécurité des systèmes d'information | https://cyber.gouv.fr/ | Conservation et traçabilité des preuves numériques |
+| Documentation du moteur de détection | https://docs.suricata.io/ | Journal au format JSON et mode de vérification des règles |
+| Site officiel de Zeek | https://zeek.org/ | Outil absent de l'image, remplacement exécutable fourni |
+| Site officiel de Splunk | https://www.splunk.com/ | Outil absent de l'image, remplacement exécutable fourni |
