@@ -4,9 +4,9 @@
   "prestataire": "Ascent",
   "lieu": "Paris — présentiel",
   "model": "opencode/big-pickle",
-  "last_updated": "2026-10-03T09:20:00Z",
+  "last_updated": "2026-10-03T11:40:00Z",
   "racine_projet": "/home/yug/Documents/forensics — répertoire depuis lequel opencode est lancé. La configuration d'agents et le dépôt git s'y trouvent directement : opencode ne lit pas une configuration placée dans un sous-répertoire, et un opencode.json ailleurs rend le système agentique invisible sans aucune erreur.",
-  "current_task": "Journée 2 terminée et validée. Le 2026-10-03, le contrôleur check-course.py a été généralisé : ses contrôles de numérotation des chapitres et de couverture de la synthèse étaient figés sur les chapitres C1 et C2 du premier jour, et signalaient donc à tort les journées 2 et 3, dont la numérotation est volontairement continue. Les deux contrôles se déduisent maintenant des modules attendus de la journée. Reste à produire et valider la journée 3.",
+  "current_task": "Journées 1 et 2 terminées, validées et relues. Reste à produire, valider et relire la journée 3 (14 octobre 2026), avec les chapitres C5 (M5, réponse aux incidents de sécurité réseau) et C6 (M6, rédaction du rapport d'enquête réseau). La journée 3 consomme `~/enquete/anomalies.md` et `~/enquete/alertes-suricata.txt`, et produit `~/enquete/chronologie-incident.md` puis `~/enquete/rapport-enquete.md`.",
   "prochaine_tache": "Faire rédiger C4 — M4 Utilisation des journaux et des outils d'analyse réseau (13 h 00 à 16 h, 180 min) par course-writer, qui consomme ~/enquete/anomalies.md et produit ~/enquete/alertes-suricata.txt, puis faire valider l'intégralité de la journée par code-tester sur l'image du laboratoire, et enfin relire par proofreader.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
@@ -124,9 +124,9 @@
       "description": "Journée 1 du 12 octobre 2026, 1213 lignes. C1 — M1 Introduction à la forensique réseau, 120 min ; C2 — M2 Capture et collecte des données réseau, 240 min, coupé par la pause déjeuner. Produit sept livrables : cadre-enquete.md, cadre-enquete.sha256, journal-acquisition.txt, capture-reference.pcap, capture-reference.pcap.sha256, inventaire-hotes.txt et inventaire-hotes.txt.sha256. Les onze commandes des deux LAB ont été rejouées sur l'image du laboratoire ; onze affirmations fausses ont été corrigées, dont la course d'armement de la capture, le volume et la durée du trafic iperf3, la portée de la capture, et l'appartenance du fichier produit à root."
     },
     "jour-2.md": {
-      "status": "C3 rédigé, en attente de validation technique et de relecture",
+      "status": " Valide et relu le 2026-10-03",
       "last_modified": "2026-10-02",
-      "description": "Journée 2 du 13 octobre 2026. C3 — M3 Analyse des paquets et détection des anomalies, 180 min, 9 h 00 à 12 h 00 : 673 lignes rédigées le 2026-10-02, en-tête de journée, préambule, vocabulaire, sept techniques, LAB de 50 min en onze étapes, production de ~/enquete/anomalies.md. En cours : C4 — M4 Utilisation des journaux et des outils d'analyse réseau, 180 min, 13 h 00 à 16 h 00, à produire, qui consomme anomalies.md et produit ~/enquete/alertes-suricata.txt."
+      "description": "Journée 2 du 13 octobre 2026. C3 — M3 Analyse des paquets et détection des anomalies, 180 min, 9 h 00 à 12 h 00 : 673 lignes rédigées le 2026-10-02, en-tête de journée, préambule, vocabulaire, sept techniques, LAB de 50 min en onze étapes, production de ~/enquete/anomalies.md. En cours : C4 — M4 Utilisation des journaux et des outils d'analyse réseau, 180 min, 13 h 00 à 16 h 00, à produire, qui consomme anomalies.md et produit ~/enquete/alertes-suricata.txt. Journée terminée le 2026-10-03 : C3 (M3) et C4 (M4), deux LAB, 17 blocs de résultat attendu, minutage 12+58+40+50+20 et 12+58+33+52+25, soit 180 minutes par chapitre. Le fil du chapitre 4 a été réécrit après la réparation du scénario : la règle de balayage se déclenche bien depuis 10.10.0.60, une partie des alertes vient des reproductions de l'enquêteur lui-même, et le véritable angle mort est le balayage de la filiale, que le détecteur ne peut pas voir parce qu'il n'observe que l'interface du site central. Validé par code-tester sur le laboratoire réel, relu par proofreader, les quatre contrôleurs du dépôt renvoyant 0."
     },
     "jour-3.md": {
       "status": "à produire",
