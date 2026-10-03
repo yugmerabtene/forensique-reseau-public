@@ -1197,13 +1197,13 @@ Les deux chapitres couvrent les six heures de la journée, sans empiétement : l
 
 ### Références
 
-Chaque lien ci-dessous a été ouvert et vérifié au jour de la rédaction du support. Les manuels donnent l'explication complète d'une option ; les références consacrées au format syslog et au format JSON décrivent la structure des fichiers que le chapitre manipule, ce qui est la référence utile quand un journal doit être contesté.
+Chaque lien ci-dessous a été ouvert et vérifié au jour de la rédaction du support. Les manuels donnent l’explication complète d’une option ; les références consacrées au format syslog et au format JSON décrivent la structure des fichiers que le chapitre manipule, ce qui est la référence utile quand un journal doit être contesté.
 
 | Référence | Adresse | Remarque |
 |---|---|---|
 | RFC 5424, format syslog des entrées de journal | https://www.rfc-editor.org/rfc/rfc5424.html | Structure des lignes du journal rassemblé |
-| MITRE ATT&CK | https://attack.mitre.org/ | Référentiel des techniques d'intrusion citées dans les chapitres 3 et 4 |
-| Agence nationale de la sécurité des systèmes d'information | https://cyber.gouv.fr/ | Conservation et traçabilité des preuves numériques |
+| MITRE ATT&CK | https://attack.mitre.org/ | Référentiel des techniques d’intrusion citées dans les chapitres 3 et 4 |
+| Agence nationale de la sécurité des systèmes d’information | https://cyber.gouv.fr/ | Conservation et traçabilité des preuves numériques |
 | Documentation du moteur de détection | https://docs.suricata.io/ | Journal au format JSON et mode de vérification des règles |
-| Site officiel de Zeek | https://zeek.org/ | Outil absent de l'image, remplacement exécutable fourni |
-| Site officiel de Splunk | https://www.splunk.com/ | Outil absent de l'image, remplacement exécutable fourni |
+| Site officiel de Zeek | https://zeek.org/ | Outil absent de l’image, remplacement exécutable fourni |
+| Site officiel de Splunk | https://www.splunk.com/ | Outil absent de l’image, remplacement exécutable fourni |
