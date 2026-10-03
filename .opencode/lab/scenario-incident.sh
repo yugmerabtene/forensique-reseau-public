@@ -62,7 +62,10 @@ balayer() {
     # SYN suivi d'un SYN-ACK puis d'un ACK. Un balayage SYN produit un SYN sans
     # réponse pour chaque port fermé : la différence entre les deux est l'un des
     # points que le chapitre sur l'analyse des paquets doit faire constater.
-    nmap -sT -n -Pn -e 10.10.0.60 --max-retries 1 --host-timeout 20s \
+    # Le poste compromis a deux interfaces : eth1 porte 10.10.0.60 (site central),
+    # eth0 porte 10.20.0.10 (filiale). Pour atteindre 10.10.0.30 sur le site central,
+    # on doit utiliser l'interface eth1.
+    nmap -sT -n -Pn -e eth1 --max-retries 1 --host-timeout 20s \
          -p 21,22,23,25,53,80,110,139,143,443,445,993,995,3306,3389 \
          "$CIBLE_FICHIERS" 2>/dev/null || true
 }
@@ -71,7 +74,9 @@ balayer() {
 # activité de la même adresse qui n'apparaît que sur le segment de la filiale.
 balayer_filiale() {
     journaliser "balayage de $CIBLE_FILIALE depuis 10.20.0.10"
-    nmap -sT -n -Pn -e 10.20.0.10 --max-retries 1 --host-timeout 20s \
+    # Pour atteindre 10.20.0.20 sur le segment de la filiale, on utilise eth0
+    # qui porte l'adresse 10.20.0.10.
+    nmap -sT -n -Pn -e eth0 --max-retries 1 --host-timeout 20s \
          -p 21,22,23,80,443 "$CIBLE_FILIALE" 2>/dev/null || true
 }
 
