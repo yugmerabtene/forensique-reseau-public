@@ -4,9 +4,9 @@
   "prestataire": "Ascent",
   "lieu": "Paris — présentiel",
   "model": "opencode/big-pickle",
-  "last_updated": "2026-10-02T21:20:00Z",
+  "last_updated": "2026-10-03T09:20:00Z",
   "racine_projet": "/home/yug/Documents/forensics — répertoire depuis lequel opencode est lancé. La configuration d'agents et le dépôt git s'y trouvent directement : opencode ne lit pas une configuration placée dans un sous-répertoire, et un opencode.json ailleurs rend le système agentique invisible sans aucune erreur.",
-  "current_task": "Journée 2 en cours. Le laboratoire a été étendu le 2026-10-02 : le collecteur et le serveur de fichiers écrivent leurs journaux dans le volume partagé, donc l'apprenant les lit en direct dans ~/journal/, en lecture seule ; onze contrôles de vérification supplémentaires le garantissent. C3 est rédigé. Reste C4, puis la validation technique de la journée et la relecture finale.",
+  "current_task": "Journée 2 en cours. Le laboratoire a été étendu le 2026-10-02 : le collecteur et le serveur de fichiers écrivent leurs journaux dans le volume partagé, donc l'apprenant les lit en direct dans ~/journal/, en lecture seule. Le 2026-10-03, un défaut du scénario a été réparé : les deux balayages n'émettaient aucun paquet, faute de nom d'interface. C3 et C4 sont rédigés et validés techniquement ; il reste à réaligner le fil pédagogique du chapitre 4 sur le laboratoire réparé, puis la relecture finale et la validation globale des trois journées.",
   "prochaine_tache": "Faire rédiger C4 — M4 Utilisation des journaux et des outils d'analyse réseau (13 h 00 à 16 h, 180 min) par course-writer, qui consomme ~/enquete/anomalies.md et produit ~/enquete/alertes-suricata.txt, puis faire valider l'intégralité de la journée par code-tester sur l'image du laboratoire, et enfin relire par proofreader.",
   "test_obligation": {
     "regle": "Toute commande, tout LAB et tout script du laboratoire doit être testé avant validation (code-tester), conformément à la section « Obligation de test » du CONTEXT.md",
@@ -101,7 +101,7 @@
     ".opencode/lab/scenario-incident.sh": {
       "status": "créé et validé",
       "last_modified": "2026-10-02",
-      "description": "Boucle d'incident : balayage, Telnet en clair, lecture de partage, flot ICMP, balayage de la filiale"
+      "description": "Boucle d'incident : balayage, Telnet en clair, lecture de partage, flot ICMP, balayage de la filiale Corrigé le 2026-10-03 : les deux balayages employaient l'option -e du sondeur avec une adresse, alors qu'elle attend le nom d'une interface ; la commande abandonnait sans émettre le moindre paquet. Les balayages nomment désormais l'interface qui porte la bonne adresse, et les paquets partent de l'adresse que le journal annonce. Contrôle de vérification intégralement passé. Mesures après correction : 50 alertes de balayage depuis 10.10.0.60 vers 10.10.0.30, 9 alertes de session en clair, 4 alertes de partage, 200 alertes de flot de paquets ; alerte environ 0,5 seconde après la ligne de journal ; tour complet d'environ 9 minutes 07, dont 67 secondes d'activité puis 8 minutes d'attente ; aucun mécanisme de relâchement des règles n'existe."
     },
     ".opencode/lab/regles-detection.rules": {
       "status": "créé et validé en direct",
