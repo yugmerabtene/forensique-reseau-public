@@ -73,7 +73,7 @@ Reste une question à laquelle presque personne ne répond vite : qui a fait quo
 | Journal des gestes | Le texte que l’enquêteur écrit pour tracer chacun de ses actes, avec son instant et son auteur | `~/enquete/journal-actions.txt`, créé par ce chapitre |
 | Journal des acquisitions | Le texte qui récapitule les pièces entrées au dossier, avec l’instant, l’auteur, l’objet et l’empreinte | `~/enquete/journal-acquisition.txt`, repris du premier jour |
 | Copie de travail | Le duplicata sur lequel l’enquêteur analyse, et sur lequel il ne s’interdit rien ; le fichier d’origine ne s’ouvre jamais | `~/enquete/copie-incident.pcap` |
-| Vecteur d’intrusion | Le chemin par lequel l’intrus est entré, du premier geste qu’il a posé au dernier qu’il a pu poser | La session en clair ouverte sur le port 23 du serveur de fichiers |
+| Vecteur d’intrusion | Le premier geste posé par l’intrus, qui ouvre la voie ; les gestes suivants n’en sont que les conséquences | Le balayage de ports depuis `10.10.0.60` vers le serveur de fichiers `10.10.0.30` |
 | Chaîne d’événements | L’ordre dans lequel des faits datés se succèdent, chacun expliquant le suivant | Les six gestes d’un tour de l’incident |
 | Chronologie | Le tableau des événements rangés par instant, chacun avec sa source et la pièce qui le prouve | `~/enquete/chronologie-incident.md` |
 | Réserve de précision | La mention qui indique à quelle granularité une chronologie peut réellement être tenue | La note d’horodatage à la seconde |
@@ -245,6 +245,36 @@ jq -r 'select(.event_type=="alert") | [.timestamp, .alert.signature_id, .src_ip,
 > **Piège — le vecteur est le premier geste, jamais le plus lourd.**
 >
 > La règle 9000004, celle du flot de paquets, produit l’immense majorité des alertes de ce laboratoire. Un dossier qui suit le volume conduit donc à lire le déni de service et à passer à côté du balayage, qui est le geste d’ouverture. Une chronologie se construit sur l’ordre, et le volume n’y joue aucun rôle.
+
+Les quatre parties de ce chapitre décrivent toutes le même tour : leur ordre fait seul le sens. La figure ci-dessous rassemble cet ordre et situe le point d’observation de l’enquêteur par rapport aux six gestes. Le schéma se lit de haut en bas pour la chronologie des gestes, puis se relit de bas en haut pour la boucle qui ramène au tour suivant ; les trois traits en pointillés, eux, se lisent du nœud de gauche vers les gestes, et répondent à une autre question, celle de ce que le poste de l’enquêteur voit réellement.
+
+```mermaid
+flowchart TD
+  CP["Poste compromis, 10.20.0.10 sur la filiale et 10.10.0.60 sur le site central"]
+  T["Début du tour, durée inférieure à une minute et demie"]
+  CP --> T
+  T --> G1["1. Balayage de ports de 10.10.0.60 vers le serveur de fichiers 10.10.0.30"]
+  G1 --> V["Vecteur d’intrusion, geste 1"]
+  G1 --> G2["2. Première tentative de session en clair vers le port 23"]
+  G2 --> G3["3. Seconde tentative de session en clair vers le port 23"]
+  G3 --> G4["4. Lecture du partage sur le port 445"]
+  G4 --> G5["5. Flot de paquets ICMP vers le serveur applicatif 10.10.0.20"]
+  G5 --> G6["6. Balayage du serveur de la filiale 10.20.0.20 depuis 10.20.0.10"]
+  G6 --> W["Attente d’environ huit minutes"]
+  W --> T2["Début du tour suivant, 9 minutes et 7 secondes plus tard"]
+  T2 --> T
+  G2 --> NC["La session en clair est une conséquence du balayage, non sa cause"]
+  subgraph OBS["Point d’observation de l’enquêteur"]
+    E["eth0 en 10.10.0.10, sur le segment 10.10.0.0/24"]
+  end
+  E -.-> G1
+  E -.-> G5
+  E -.->|"angle mort du détecteur"| G6
+```
+
+**Fig 1 — Les six gestes d’un tour de l’incident, et ce que le point d’observation de l’enquêteur en voit.**
+
+Ce que la figure ne montre pas : ni la durée de chaque geste, ni la seconde exacte de son exécution, que seuls les journaux d’actions donnent. Elle ne montre pas les huit minutes d’attente autrement que par une case sans aucun geste. Enfin, elle désigne le vecteur au geste 1 ; le geste 2 n’en est pas la cause, il en est la conséquence, et le trait qui les relie dit précisément cela.
 
 ### Les techniques, pas à pas
 
@@ -424,7 +454,7 @@ Si l’une des deux empreintes ne se vérifie plus, le LAB s’arrête : une chr
 L’enquêteur ne commence jamais par une action : il commence par savoir ce qu’il a, et par ouvrir le registre où il notera ce qu’il fera.
 
 ```bash
-ls -l --time-style=full-iso ~/enquete
+ls -lt --time-style=full-iso ~/enquete
 sha256sum -c ~/enquete/*.sha256
 cat ~/enquete/journal-acquisition.txt
 printf '%s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "inventaire des pièces, ouverture du journal des gestes" >> ~/enquete/journal-actions.txt
@@ -448,7 +478,7 @@ capinfos -c ~/enquete/incident.pcap
 printf '%s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "ouverture de la capture d’incident sur eth0" >> ~/enquete/journal-actions.txt
 ```
 
-> **Résultat attendu :** la commande d’adresse rend une ligne par interface, et celle de `eth0` porte `10.10.0.10/24`. Le point d’observation est l’interface `eth0` du poste de l’enquêteur, qui se trouve sur le segment `10.10.0.0/24` (site central) et non sur le segment du poste compromis. Par conséquent, la capture prise sur `eth0` n’enregistre pas directement le trafic émis depuis le segment de la filiale : elle n’observe que ce qui atteint le site central. Le fichier `~/enquete/incident.pcap` existe déjà et sa taille augmente dès que du trafic passe sur ce segment ; le nombre de paquets rendu par la commande de métadonnées peut être nul à l’ouverture, quand aucun paquet n’est encore passé sur le segment, puis croître à mesure que le trafic s’accumule ; il dépend du moment où la commande est exécutée. Cette lecture se fait sur un fichier en cours d’écriture : si elle rencontre un paquet dont l’en-tête est écrit et le contenu pas encore, elle affiche un avertissement de fichier tronqué et s’arrête sur ce paquet. Ce message n’est pas une panne : il décrit une lecture interrompue. Seule la mesure faite sur une capture fermée est fiable, et c’est pourquoi l’étape 4 la refait. Le scénario ne produit un tour complet que toutes les neuf minutes environ : une capture de quelques minutes ne peut pas contenir l’incident, et c’est un résultat attendu. La dernière commande ajoute une deuxième ligne au journal des gestes.
+> **Résultat attendu :** la commande d’adresse rend une ligne par interface, et celle de `eth0` porte `10.10.0.10/24`. Le point d’observation est l’interface `eth0` du poste de l’enquêteur, qui se trouve sur le segment `10.10.0.0/24` (site central) et non sur le segment du poste compromis. Par conséquent, la capture prise sur `eth0` n’enregistre pas directement le trafic émis depuis le segment de la filiale : elle n’observe que ce qui atteint le site central. Le fichier `~/enquete/incident.pcap` existe déjà et sa taille augmente dès que du trafic passe sur ce segment ; le nombre de paquets rendu par la commande de métadonnées peut être nul à l’ouverture, quand aucun paquet n’est encore passé sur le segment, puis croître à mesure que le trafic s’accumule ; il dépend du moment où la commande est exécutée. Cette lecture se fait sur un fichier en cours d’écriture : si elle rencontre un paquet dont l’en-tête est écrit et le contenu pas encore, elle affiche un avertissement de fichier tronqué et s’arrête sur ce paquet. Ce message n’est pas une panne : il décrit une lecture interrompue. Seule la mesure faite sur une capture fermée est fiable, et c’est pourquoi l’étape 4 la refait. Le scénario ne produit un tour complet que toutes les neuf minutes environ : une capture ouverte moins de neuf minutes ne peut pas contenir un tour complet, et c’est un résultat attendu. La dernière commande ajoute une deuxième ligne au journal des gestes.
 
 **Dépannage :** si le fichier n’apparaît pas dans le dossier, l’interface n’est pas nommée `eth0` : la commande `ip -brief link` liste les noms réels des interfaces. Si le nombre de paquets reste nul, aucun trafic ne passe encore sur le segment : attendre quelques secondes et relancer la commande de métadonnées. Si la commande de métadonnées signale un fichier tronqué, attendre une seconde et la relancer. Si une capture antérieure est encore ouverte, elle écrirait dans le même fichier et la capture scellée deviendrait illisible : la commande `pgrep -a tcpdump` liste les enregistrements en cours, et il faut les arrêter avant d’ouvrir celle-ci. Le fichier appartient au compte `tcpdump`, que le processus adopte après avoir ouvert l’interface : l’enquêteur ne peut pas l’écrire, mais il peut le renommer et le supprimer, parce qu’il est propriétaire du dossier qui le contient. Cette distinction n’a aucune conséquence tant que la capture est ouverte ; elle compte à l’étape 4, où le fichier doit être remis à l’enquêteur.
 
@@ -521,11 +551,17 @@ printf 'écart en secondes entières : %s\n' "$(( $(date -d "$a" +%s) - $(date -
 
 > **Résultat attendu :** six lignes pour la première commande, qui sont les six gestes d’un même tour, dans l’ordre : le balayage depuis `10.10.0.60`, les deux tentatives en clair vers le port 23, la lecture du partage, le flot de paquets vers `10.10.0.20`, puis le balayage de la filiale depuis `10.20.0.10`. Huit lignes pour la seconde, qui commencent par cinq alertes de la règle 9000001 portant l’adresse `10.10.0.60`, puis par des alertes de la règle 9000002 dont l’adresse d’origine est celle du serveur de fichiers : le sens du flux y est inversé par rapport à l’intrusion, et il faut le lire ainsi. Les trois dernières commandes affichent les deux instants du même événement et leur différence, qui vaut zéro ou une seconde entière. Les valeurs exactes dépendent du tour lu, et c’est la borne qui compte : elle ne dépasse pas une seconde et demie, parce que le journal enregistre l’heure à la seconde.
 
-**Dépannage :** si la première commande rend moins de six lignes, le motif d’exclusion a probablement supprimé un geste : vérifier que le filtre porte bien sur les deux messages de bord. Si la seconde ne rend rien, le moteur de détection écrit peut-être encore une ligne incomplète : relancer après quelques secondes. Si la commande de calcul affiche un écart de neuf secondes ou davantage, les deux instants ne décrivent pas le même événement : la règle 9000002 se déclenche aussi sur la connexion que le balayage ouvre sur le port 23, et c’est l’appariement par le temps, effectué par la troisième commande, qui évite cette confusion. Si la commande refuse la valeur d’un instant, c’est que l’alerte n’a pas encore été écrite dans le fichier : attendre la fin du tour en cours.
+**Dépannage :** si la première commande rend moins de six lignes, le motif d’exclusion a probablement supprimé un geste : vérifier que le filtre porte bien sur les deux messages de bord. Si le filtre rend tout, y compris les messages de bord, c’est que le fichier est encodé avec des accents décomposés, où la lettre et son accent occupent deux caractères : la commande `file -i ~/journal/journal-reseau.log` indique l’encodage, et il faut alors recopier le motif depuis le fichier lui-même plutôt que depuis cette page. Si la seconde ne rend rien, le moteur de détection écrit peut-être encore une ligne incomplète : relancer après quelques secondes. Si la commande de calcul affiche un écart de neuf secondes ou davantage, les deux instants ne décrivent pas le même événement : la règle 9000002 se déclenche aussi sur la connexion que le balayage ouvre sur le port 23, et c’est l’appariement par le temps, effectué par la troisième commande, qui évite cette confusion. Si la commande refuse la valeur d’un instant, c’est que l’alerte n’a pas encore été écrite dans le fichier : attendre la fin du tour en cours.
 
 **Étape 6 — Rédiger la chronologie, la sceller et la consigner (8min)**
 
 Le livrable est un fichier rédigé par l’enquêteur, au clavier, à partir du gabarit ci-dessous. Aucune commande ne le produit : c’est le seul livrable des trois jours qui ne puisse pas être obtenu par un outil, parce qu’il est une mise en ordre des constats et non une mesure. Les instants, les machines et les preuves viennent des étapes 1 à 5 ; aucun champ entre chevrons ne doit subsister.
+
+```bash
+nano ~/enquete/chronologie-incident.md
+```
+
+L’éditeur crée le fichier s’il n’existe pas encore. Le gabarit ci-dessous sert de plan : chaque ligne entre chevrons est à remplacer par une valeur réellement lue aux étapes précédentes.
 
 ```markdown
 # Chronologie de l’incident — laboratoire Forensique réseau
@@ -565,7 +601,7 @@ ne dépasse pas une seconde et demie ; deux événements de la même seconde res
 | <hh:mm:ss> | fermeture de la capture et copie de travail | copie ~/enquete/copie-incident.pcap, empreinte identique à celle de la source |
 
 ## Limites de cette chronologie
-- Un tour de l’incident dure environ 67 secondes et se répète environ toutes les 9 minutes et 7 secondes : les horaires retenus sont ceux d’un seul tour.
+- Un tour de l’incident dure moins d’une minute et demie et se répète environ toutes les 9 minutes et 7 secondes : les horaires retenus sont ceux d’un seul tour.
 - Le moteur de détection n’observe que le site central : le balayage de la filiale n’y figure par aucune alerte.
 - Le journal d’accès nomme les machines par leur nom NetBIOS et ne donne aucune adresse.
 - Quelques alertes portent l’adresse 10.10.0.10 : ce sont les reproductions faites par l’enquêteur lui-même, pas l’intrusion.
@@ -575,6 +611,7 @@ ne dépasse pas une seconde et demie ; deux événements de la même seconde res
 Une fois le fichier rédigé et enregistré sous le nom `~/enquete/chronologie-incident.md`, l’enquêteur scelle le livrable et l’inscrit. L’ordre des quatre commandes compte : l’empreinte est calculée une fois, sur le fichier définitif, et l’écriture au journal des acquisitions vient après.
 
 ```bash
+test -f ~/enquete/chronologie-incident.md && echo "Fichier présent : chronologie-incident.md" || echo "ABSENT : enregistrez le fichier rédigé sous ~/enquete/chronologie-incident.md avant de poursuivre."
 sha256sum ~/enquete/chronologie-incident.md > ~/enquete/chronologie-incident.md.sha256
 sha256sum -c ~/enquete/chronologie-incident.md.sha256
 printf '%s | %s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "chronologie-incident.md" "$(cut -c1-64 ~/enquete/chronologie-incident.md.sha256)" >> ~/enquete/journal-acquisition.txt
@@ -584,7 +621,7 @@ cat ~/enquete/journal-actions.txt
 
 > **Résultat attendu :** la commande de vérification répond que le fichier est conforme. Le livrable ne contient aucune ligne d’empreinte : un fichier ne peut pas contenir sa propre empreinte, et l’ajouter après le scellement rendrait le sceau faux. Le journal des acquisitions se termine par une ligne de quatre champs, dont le dernier est l’empreinte du livrable. La dernière commande rend le journal des gestes, qui tient alors sur quatre lignes : l’inventaire des pièces, l’ouverture de la capture, la coupure de contact, puis la fermeture de la capture. Quatre lignes, et non cinq, parce que la rédaction de la chronologie elle-même ne figure pas dans le journal des gestes : elle figure dans le journal des acquisitions, où elle est scellée. Si la démonstration de la partie 3 a été exécutée avant le LAB, le fichier portait déjà sa ligne d’ouverture du journal, et le compte est alors de cinq : c’est le même journal, non un doublon.
 
-**Dépannage :** si la vérification échoue, le fichier a été modifié après son scellement : il faut recalculer l’empreinte, la consigner de nouveau, et inscrire la modification au journal des acquisitions. Si le journal des gestes ne contient pas la ligne attendue, le bloc de commandes n’a pas été exécuté jusqu’au bout : le refaire. Si une même ligne d’inventaire apparaît deux fois, le LAB a été commencé deux fois ; c’est le seul indice qui le distingue d’une démonstration préalable, et il ne faut pas effacer le fichier, car il est le journal des gestes de la journée. Si un champ entre chevrons subsiste dans le livrable, la rédaction n’est pas terminée : le sceller reviendrait à sceller un modèle, non un constat.
+**Dépannage :** si le bloc affiche `ABSENT`, le fichier `chronologie-incident.md` n’est pas encore enregistré sous ce nom ; l’enregistrer dans `~/enquete/`, puis relancer le bloc. Si la vérification échoue ensuite, le fichier a été modifié après son scellement : il faut recalculer l’empreinte, la consigner de nouveau, et inscrire la modification au journal des acquisitions. Si le journal des gestes ne contient pas la ligne attendue, le bloc de commandes n’a pas été exécuté jusqu’au bout : le refaire. Si une même ligne d’inventaire apparaît deux fois, le LAB a été commencé deux fois ; c’est le seul indice qui le distingue d’une démonstration préalable, et il ne faut pas effacer le fichier, car il est le journal des gestes de la journée. Si un champ entre chevrons subsiste dans le livrable, la rédaction n’est pas terminée : le sceller reviendrait à sceller un modèle, non un constat.
 
 ### Ce que ce LAB produit
 
@@ -612,7 +649,7 @@ Le poste compromis tente cent mots de passe contre le serveur de fichiers en une
 
 **Exercice 2 — Remplir la réserve de précision (5min)**
 
-La mesure de l’étape 5 donne un écart de zéro seconde entre le journal et l’alerte pour la première tentative de session en clair. En trois phrases, dire pourquoi cet écart ne permet pas d’écrire que les deux sources sont synchronisées à la milliseconde, et quelle mention de réserve de précision un rapport doit employer.
+La mesure de l’étape 5 donne un écart de zéro ou d’une seconde entière entre le journal et l’alerte pour la première tentative de session en clair, selon le tour lu. En trois phrases, dire pourquoi cet écart ne permet pas d’écrire que les deux sources sont synchronisées à la milliseconde, et quelle mention de réserve de précision un rapport doit employer.
 
 **Exercice 3 — Séparer la décision du geste (5min)**
 
@@ -628,7 +665,7 @@ Le journal d’accès du serveur de fichiers écrit `[LAB-COMPROMIS]` et ne donn
 
 **Exercice 6 — Justifier la fenêtre de la chronologie (5min)**
 
-La capture `~/enquete/incident.pcap` a été ouverte pendant huit minutes et contient quelques dizaines de paquets, alors que le dossier contient une capture de quelques centaines de paquets produite au chapitre 3. En trois phrases, expliquer pourquoi ce volume n’est pas un défaut, et ce que l’enquêteur doit écrire dans la chronologie pour que cette fenêtre soit comprise par un tiers.
+La capture `~/enquete/incident.pcap` a été ouverte pendant seize minutes et contient quelques dizaines de paquets, alors que le dossier contient une capture de quelques centaines de paquets produite au chapitre 3. En trois phrases, expliquer pourquoi ce volume n’est pas un défaut, et ce que l’enquêteur doit écrire dans la chronologie pour que cette fenêtre soit comprise par un tiers.
 ---
 
 ## Chapitre 6 — M6 : Rédiger le rapport d’enquête réseau (13h00–16h00)
@@ -707,6 +744,41 @@ Un rapport d’enquête réseau se structure en sections obligatoires. Chacune a
 
 Cette structure est imposée par le syllabus (M6). Elle est respectée strictement dans le LAB.
 
+La figure ci-dessous montre les neuf sections dans l’ordre du rapport et, pour chacune, la pièce dont les faits sont tirés. Le schéma se lit de haut en bas, par groupes de trois sections : chaque groupe répond à une question, et le nœud relié en pointillés à droite d’une section nomme le fichier qui l’alimente.
+
+```mermaid
+flowchart TD
+  R["Rapport d’enquête réseau"]
+  R --> A
+  R --> B
+  R --> C
+  subgraph A["Sections 1 à 3, ce que l’enquêteur a fait"]
+    direction LR
+    S1["1. Identification de l’enquête"] --> S2["2. Périmètre"] --> S3["3. Méthodologie"]
+  end
+  subgraph B["Sections 4 à 6, ce que l’enquêteur a constaté"]
+    direction LR
+    S4["4. Chronologie"] --> S5["5. Analyse"] --> S6["6. Résultats"]
+  end
+  subgraph C["Sections 7 à 9, ce que le rapport promet et ce qu’il prouve"]
+    direction LR
+    S7["7. Recommandations"] --> S8["8. Traçabilité"] --> S9["9. Conformité"]
+  end
+  S1 -.->|"cadre du premier jour"| F1["cadre-enquete.md"]
+  S2 -.->|"cadre et périmètre affecté"| F2["cadre-enquete.md et chronologie-incident.md"]
+  S3 -.->|"gestes consignés"| F3["journal-actions.txt et techniques du chapitre 5"]
+  S4 -.->|"ordre des faits"| F4["chronologie-incident.md"]
+  S5 -.->|"recoupement des sources"| F5["alertes-suricata.txt, journal-samba.log et anomalies.md"]
+  S6 -.->|"faits établis et non établis"| F6["anomalies.md et alertes-suricata.txt"]
+  S7 -.->|"constats à corriger"| F7["anomalies.md"]
+  S8 -.->|"pièces et empreintes"| F8["journal-acquisition.txt et fichiers scellés"]
+  S9 -.->|"règles appliquées"| F9["journal-actions.txt et journal-acquisition.txt"]
+```
+
+**Fig 2 — Les neuf sections du rapport d’enquête, et la pièce qui alimente chacune d’elles.**
+
+Ce que la figure ne montre pas : ni la longueur de chaque section, ni le nombre de lignes qu’elle occupe dans le fichier rédigé, qui dépendent de la formulation de l’enquêteur et ne constituent pas une contrainte. Elle ne montre pas l’ordre des événements : l’ordre des sections est celui du raisonnement, non celui de la chronologie. Elle ne montre pas davantage la réserve de précision, qui figure au sein de la section 4 et non dans une section à part entière.
+
 #### 3. Analyse et résultats (14min)
 
 L’analyse part des faits établis au chapitre 5. Le vecteur d’intrusion retenu est le suivant : balayage de ports depuis `10.10.0.60` vers `10.10.0.30`, suivi d’une session en clair sur le port 23, puis d’une lecture de partage, puis d’un flot de paquets ICMP vers `10.10.0.20`. Ce vecteur est prouvé par le recoupement entre les alertes Suricata et le journal d’accès du serveur de fichiers.
@@ -754,6 +826,7 @@ cat /tmp/gabarit-rapport.txt | head -5
 
 *Bloc de commandes :*
 ```bash
+test -f ~/enquete/chronologie-incident.md && echo "Fichier présent : chronologie-incident.md" || echo "ABSENT : enregistrez le fichier rédigé sous ~/enquete/chronologie-incident.md avant de poursuivre."
 head -60 ~/enquete/chronologie-incident.md
 grep -n "Vecteur\|Périmètre affecté\|Réserve de précision" ~/enquete/chronologie-incident.md
 ```
@@ -761,7 +834,9 @@ grep -n "Vecteur\|Périmètre affecté\|Réserve de précision" ~/enquete/chrono
 *Ce que la sortie prouve :* les faits sont accessibles et non perdus.
 *Ce qu’elle ne prouve pas :* leur bonne transcription ; la relecture est nécessaire.
 
-*Remarque de rédaction :* le motif de recherche s’arrête au mot `Vecteur` et ne reprend pas la suite du titre. Un motif qui contiendrait l’apostrophe de `d’intrusion` échouerait selon la forme de cette apostrophe, droite ou typographique : le laboratoire travaille dans une locale POSIX, où une apostrophe typographique occupe trois octets, et où un motif n’en couvre qu’un. Un motif sans apostrophe reste valable quelle que soit la forme saisie au clavier.
+> **Note technique — une apostrophe n’est pas une lettre.**
+>
+> Le motif de recherche s’arrête délibérément au mot `Vecteur` et ne reprend pas la suite du titre. La raison vaut pour tout le cours : le laboratoire travaille dans une locale POSIX, où l’apostrophe typographique occupe trois octets et l’apostrophe droite en occupe un. Un motif qui chercherait `d’intrusion` avec l’une des deux formes ne trouverait donc rien avec l’autre, sans aucun message d’erreur : la commande répond simplement « aucun résultat ». Un motif sans apostrophe reste valable quelle que soit la forme saisie au clavier. Cette prudence vaut pour toutes les recherches du cours.
 
 **Technique 3 — Vérifier les empreintes des pièces citées (6min)**
 
@@ -1010,6 +1085,7 @@ L’enquêteur scelle le rapport d’enquête en calculant son empreinte, la vé
 
 *Bloc de commandes :*
 ```bash
+test -f ~/enquete/rapport-enquete.md && echo "Fichier présent : rapport-enquete.md" || echo "ABSENT : enregistrez le fichier rédigé sous ~/enquete/rapport-enquete.md avant de poursuivre."
 sha256sum ~/enquete/rapport-enquete.md > ~/enquete/rapport-enquete.md.sha256
 sha256sum -c ~/enquete/rapport-enquete.md.sha256
 printf '%s | %s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "rapport-enquete.md" "$(cut -c1-64 ~/enquete/rapport-enquete.md.sha256)" >> ~/enquete/journal-acquisition.txt
