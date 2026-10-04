@@ -61,3 +61,8 @@ __pycache__/
 # extraite de la plateforme et verifiee. Les deux fichiers sont identiques au
 # moment du regroupement ; un seul est suivi.
 /syllabus.txt
+
+# Journal de session opencode Waxdrop dans le repertoire de travail. Il porte
+# sur une autre formation, le cours d'IA, et ne appartient pas a Forensique
+# reseau. Il est ecarte du depot pour qu'aucun contenu etranger ne s'y glisse.
+/session-ses_*.md
