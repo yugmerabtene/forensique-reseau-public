@@ -81,3 +81,20 @@ C'est la structure même de la formation, et c'est le contrôle le plus importan
 - Méthodique : parcours le fichier section par section, puis signale les non-conformités par catégorie (bruit, langue et style, structure, planning, livrables, environnement).
 - Quand tu corriges, donne un exemple avant/après pour chaque type de correction significative.
 - Ton rapport final : **AUDIT** — bruit et caractères (nombre et nature), conformité `CONTEXT.md` (points conformes et points corrigés), conformité au planning (points conformes et points corrigés), chaîne des livrables (intégrité vérifiée ou rupture signalée), puis **VERDICT FINAL** : PRÊT ou À CORRIGER, avec la liste des corrections à faire.
+
+## 6. Qualité des schémas (PRIORITÉ)
+
+Un schéma illisible est un défaut bloquant, pas un détail de mise en forme.
+
+1. Vérifier que le texte de chaque schéma est visible en entier : aucun libellé
+   tronqué, coupé au milieu d'un mot ni rogné par la largeur du cadre.
+2. Vérifier qu'aucune ligne de libellé ne dépasse 40 caractères, et que les libellés
+   longs portent des coupures `<br/>` placées à un coupure de mot.
+3. Vérifier la numérotation `Fig N` : continue dans tout le support, sans doublon ni
+   saut.
+4. Vérifier que chaque schéma porte sa légende numérotée et la phrase
+   `Ce que le schéma ne montre pas : …`.
+5. Vérifier que chaque schéma est cité au moins une fois dans les étapes qu'il
+   éclaire, et que la phrase qui l'introduit annonce le sens de lecture.
+6. Vérifier qu'il n'existe aucun `<foreignObject>` dans le rendu : ce contrôle est
+   fait par `check-schema.py`, pas à la lecture du markdown.

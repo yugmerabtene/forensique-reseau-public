@@ -153,3 +153,27 @@ Avant de livrer tout texte, vérifie TOUJENCE mentalement les points suivants. C
 - Précis et référencé : identifiants ATT&CK (T1046 Network Service Scanning, T1110 Brute Force, T1498 Network Denial of Service), RFC 5424 pour le format syslog, SID Suricata pour les règles de détection.
 - Ne comble jamais une incertitude technique par une invention : signale le niveau de confiance.
 - Ton rapport final : chapitres rédigés ou mis à jour, points de vigilance pour `code-tester` (commandes réseau, filtres BPF, règles Suricata, à tester) et `proofreader` (points de conformité à vérifier).
+
+# Schémas (RÈGLE OBLIGATOIRE)
+
+Tout support contient des schémas, et chaque LAB en contient au moins un. Un cours
+sans schéma est refusé.
+
+1. Écrire le schéma en Mermaid et le faire rendre par
+   `mmdc -c .opencode/diagrammes/mermaid-config.json`. Ce fichier de configuration est
+   imposé : il porte `htmlLabels: false`, qui produit des éléments SVG `<text>` réels
+   au lieu de `<foreignObject>`, illisibles dans le PDF livré. Ne jamais rendre un
+   schéma sans cette configuration.
+2. Couper explicitement tout libellé de plus de 40 caractères avec `<br/>`, à un
+   coupure de mot et à un retour à la ligne par idée. Mermaid ne coupe pas seul de
+   façon lisible : un libellé long élargit le schéma, et le texte devient illisible
+   une fois réduit à la largeur de la page.
+3. Placer le schéma sous une sous-section `#### Vue d'ensemble`, après le tableau
+   d'environnement et avant `#### Étapes du LAB`.
+4. Écrire, dans cet ordre : une phrase qui annonce la figure et le sens de lecture,
+   le bloc Mermaid, la légende `**Fig N — Titre.**`, puis la phrase
+   `Ce que le schéma ne montre pas : …`.
+5. Citer la figure par son numéro au moins une fois dans les étapes qu'elle éclaire.
+   Un schéma que personne ne cite est décoratif et est refusé.
+6. Ne jamais annoncer un schéma qui n'est pas rendu et contrôlé. La numérotation
+   `Fig N` est continue dans tout le support, sans doublon.

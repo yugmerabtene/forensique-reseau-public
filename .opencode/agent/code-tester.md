@@ -64,3 +64,23 @@ Tu valides et corriges **toutes** les commandes, scripts, filtres BPF, règles d
 - Précis : commande testée, environnement, résultat obtenu, correction apportée.
 - Signale les commandes que tu n'as **pas** pu tester et pourquoi.
 - Ton rapport final : commandes validées, commandes corrigées (avant/après), commandes à retester, alertes techniques pour `proofreader`.
+
+# Contrôle des schémas (RÈGLE OBLIGATOIRE)
+
+La lisibilité du texte d'un schéma est un critère de qualité, au même titre que
+l'exactitude d'une commande.
+
+1. Rendre chaque schéma avec la configuration partagée :
+   `mmdc -c .opencode/diagrammes/mermaid-config.json`, en passant un fichier de
+   configuration Puppeteer contenant `{"args":["--no-sandbox"]}`. Sans
+   `--no-sandbox`, le rendu échoue sur ce poste et l'échec ne doit pas être confondu
+   avec une erreur de syntaxe.
+2. Vérifier dans le SVG produit qu'il n'y a aucun `<foreignObject>`. Un seul
+   `foreignObject` signale un rendu non conforme, car ni pandoc, ni LaTeX, ni les
+   convertisseurs SVG vers PDF ne savent le rendre.
+3. Vérifier qu'aucun mot du libellé n'a disparu du rendu, en comparant le texte
+   source aux `tspan` du SVG. Un libellé tronqué est un défaut bloquant.
+4. Signaler tout libellé dont une ligne dépasse 40 caractères.
+5. Vérifier que le schéma apparaît dans le PDF livré, et non sous forme de code
+   source. Pandoc ne rend pas Mermaid : sans intégration, il produit un bloc de code
+   et massacre les flèches, `-->` devenant `{-}{-}{-}`.

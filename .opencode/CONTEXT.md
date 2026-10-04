@@ -381,6 +381,47 @@ cette réponse désigne une configuration non chargée, pas un agent fonctionnel
 - **Contrôle automatique :** `python3 .opencode/scripts/check-course.py` vérifie la
   structure, le français et les liens, et renvoie 1 si une anomalie subsiste.
 
+### Schémas — obligation et normes de lisibilité (RÈGLE OBLIGATOIRE)
+
+Un cours sans schéma est un cours incomplet. Tout support contient des schémas, et
+chaque LAB en contient au moins un.
+
+**Pourquoi cette règle existe.** Un schéma dont le texte est tronqué, illisible ou
+absent du PDF ne sert plus le lecteur. La lisibilité du texte d'un schéma est
+donc un critère de qualité, au même titre que l'exactitude d'une commande. Un schéma
+illisible est un défaut bloquant, pas un détail de mise en forme.
+
+**Configuration imposée.** Tout rendu passe par le fichier de configuration partagé
+`.opencode/diagrammes/mermaid-config.json`, qui impose `htmlLabels: false`. Ce
+réglage est obligatoire et non négociable : il produit des éléments SVG `<text>`
+réels au lieu de `<foreignObject>`, que ni pandoc, ni LaTeX, ni les convertisseurs
+SVG vers PDF ne savent rendre. Un rendu produit sans ce fichier est un rendu non
+conforme.
+
+**Normes de lisibilité, contrôlées automatiquement.**
+
+1. **Le texte est visible en entier.** Aucun libellé ne doit être tronqué, coupé au
+   milieu d'un mot ni rogné par la largeur du cadre.
+2. **Une ligne de libellé ne dépasse pas 40 caractères.** Au-delà, le schéma s'élargit,
+   il est réduit à la largeur de la page à l'export, et le texte devient illisible.
+   Les libellés longs sont donc coupés explicitement avec `<br/>`, à un coupure de mot
+   et à un retour à la ligne par idée.
+3. **Le sens de lecture est annoncé** dans la phrase qui introduit le schéma, afin que
+   le lecteur sache par où commencer.
+4. **Chaque schéma porte une légende numérotée** `**Fig N — Titre.**`, et la
+   numérotation `Fig N` est continue et sans doublon dans tout le support.
+5. **Chaque schéma est référencé au moins une fois** dans les étapes qu'il éclaire.
+   Un schéma que personne ne cite est un schéma décoratif.
+6. **Chaque schéma déclare ses limites** par une phrase `Ce que le schéma ne montre
+   pas : …`. Le lecteur doit savoir ce que la lecture du schéma ne prouve pas.
+
+**Vérification obligatoire.** Le rendu de chaque schéma est contrôlé par
+`python3 .opencode/scripts/check-schema.py jour-1.md jour-2.md jour-3.md`, qui rend
+les schémas avec `mmdc` et la configuration partagée, puis signale tout libellé trop
+long, tout `<foreignObject>`, toute numérotation cassée, toute légende absente, tout
+renvoi manquant et toute limite non déclarée. Le rendu dans le PDF livré est vérifié
+par `check-pdf.py`. Ce contrôle s'ajoute aux quatre contrôleurs existants.
+
 ### Règles de détail du cours (RÈGLE OBLIGATOIRE)
 
 Le cours s'adresse à des investigateurs qui doivent être autonomes le jour de
@@ -415,6 +456,12 @@ l'enquête. Le support ne laisse jamais une affirmation sans preuve.
 11. **Notion propre à la forensique :** le cours enseigne l'horodatage, la
     conservation et la traçabilité des preuves. Un chapitre qui manipule des preuves
     énonce la règle de conservation qu'il applique et l'inscrit dans le livrable.
+12. **Aucun apprenant ne peut être perdu.** Chaque LAB commence par rappeler
+    comment démarrer le laboratoire : construction ou redémarrage du conteneur,
+    commande de vérification qui prouve que le poste répond, et emplacement du
+    répertoire de travail. Un LAB qui suppose un laboratoire déjà démarré sans le
+    dire est un défaut bloquant. Le lecteur ne doit jamais devoir deviner une
+    commande manquante, ni se demander pourquoi une capture est vide.
 
 ### Conventions
 
@@ -461,10 +508,13 @@ l'enquête. Le support ne laisse jamais une affirmation sans preuve.
    python3 .opencode/scripts/check-texte.py jour-1.md jour-2.md jour-3.md
    python3 .opencode/scripts/check-pdf.py jour-1.md jour-2.md jour-3.md
    python3 .opencode/scripts/check-typographie.py jour-1.md jour-2.md jour-3.md
+   python3 .opencode/scripts/check-schema.py jour-1.md jour-2.md jour-3.md
    ```
 
-   Le dernier script corrige au lieu de signaler : le relancer jusqu'à ce qu'il
-   annonce « déjà conforme ». Les trois autres doivent renvoyer 0.
+   `check-typographie.py` corrige au lieu de signaler : le relancer jusqu'à ce
+   qu'il annonce « déjà conforme ». Les quatre autres doivent renvoyer 0. Le
+   contrôle des schémas est celui qui garantit que le texte d'une figure est
+   visible en entier ; il rend réellement chaque schéma, il ne le relit pas.
 
 ---
 
