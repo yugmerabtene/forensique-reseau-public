@@ -52,7 +52,6 @@ DATES_ATTENDUES = {
 ERREURS = []
 
 SECTIONS_JOUR = [
-    "## Comment lire ce support",
     "## Objectifs du Jour",
     "## Planning du Jour",
     "## Le fil du jour",

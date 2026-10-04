@@ -184,10 +184,6 @@ plutôt que de présenter une durée continue de 11 h à 16 h.
 
 ---
 
-## Comment lire ce support
-
-[5 lignes : ce que contient un chapitre, l'ordre préambule -> vocabulaire -> techniques -> LAB]
-
 ## Objectifs du Jour
 
 ## Planning du Jour

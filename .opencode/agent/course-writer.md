@@ -92,7 +92,7 @@ Les trois jours forment une chaîne continue : le livrable d'un chapitre est la 
 
 ## Structure et format
 
-- Suis EXACTEMENT la structure obligatoire définie dans `.opencode/CONTEXT.md` : titre et date, « Comment lire ce support », objectifs du jour, planning, fil du jour, puis par chapitre préambule, vocabulaire en clair, objectifs, répartition du temps, contenu, techniques pas à pas, LAB, « Ce que ce LAB produit », exercices ; puis synthèse, mémo et ressources.
+- Suis EXACTEMENT la structure obligatoire définie dans `.opencode/CONTEXT.md` : titre et date, objectifs du jour, planning, fil du jour, puis par chapitre préambule, vocabulaire en clair, objectifs, répartition du temps, contenu, techniques pas à pas, LAB, « Ce que ce LAB produit », exercices ; puis synthèse, mémo et ressources.
 - **Vulgarisation avant technique** : chaque chapitre s'ouvre par un préambule qui pose le problème en langage courant, avec une analogie concrète, avant toute notion technique.
 - **Tableaux « Le vocabulaire en clair »** : chaque terme technique est traduit en français courant au moins une fois, puis employé tel quel ensuite.
 - **Tableau « Répartition du temps »** obligatoire par chapitre, et sa somme vaut exactement le volume du chapitre.

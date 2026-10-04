@@ -4,17 +4,6 @@
 
 ---
 
-## Comment lire ce support
-
-Chaque chapitre se lit dans le même ordre, et cet ordre n’est jamais modifié : le préambule pose d’abord le problème en langage courant, sans aucune notion technique.
-Le vocabulaire en clair traduit ensuite chaque terme avant son premier emploi, afin qu’aucun mot du cours ne reste nu.
-Le contenu du chapitre expose les notions et les démontre par une commande, un tableau ou un résultat de laboratoire.
-Les techniques, pas à pas expliquent chaque commande avant de la donner, en précisant ce qu’elle mesure, ce que sa sortie prouve et ce qu’elle ne prouve pas.
-Le LAB et ses exercices produisent enfin un livrable nommé, que le chapitre suivant consomme.
-
-Ce jour est particulier. Le chapitre 2 est le plus long de la formation : il occupe la dernière heure de la matinée et l’après-midi complet, et il est donc coupé par la pause déjeuner de 12h00 à 13h00.
-Les deux créneaux appartiennent au même chapitre, et la pause n’est pas une interruption de cours : c’est le seul intervalle que ce chapitre ne couvre pas.
-
 ### Avant la séance — montage du laboratoire
 
 Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00 :
