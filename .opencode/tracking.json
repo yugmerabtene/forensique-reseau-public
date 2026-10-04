@@ -88,27 +88,27 @@
       "last_modified": "2026-10-02",
       "description": "Fragment LaTeX d'insertion dans le modèle Ascent, identité visuelle validée sur trois PDF"
     },
-    ".opencode/lab/Dockerfile": {
+    "lab/Dockerfile": {
       "status": "créé et construit",
       "last_modified": "2026-10-02",
       "description": "Image du laboratoire : outils réseau, Suricata, Samba, rsyslog, compte ordinaire enqueteur, règles de détection"
     },
-    ".opencode/lab/construire-lab.sh": {
+    "lab/construire-lab.sh": {
       "status": "créé, validé et étendu",
       "last_modified": "2026-10-02",
       "description": "Topologie à deux segments, sonde de détection partageant l'espace réseau du poste compromis, montage, vérification autonome, scénario d'incident et arrêt. Étendu le 2026-10-02 : le volume partagé est monté chez le collecteur et chez le serveur de fichiers, qui y écrivent leurs journaux. L'apprenant les lit en direct dans ~/journal/journal-reseau.log et ~/journal/journal-samba.log, en lecture seule, sans copie ni export. Onze contrôles de vérification supplémentaires garantissent que les journaux sont lisibles par le compte ordinaire, alimentés par le trafic réel, et que l'apprenant ne peut ni les écrire ni les modifier. Délai de transport mesuré : sous 0,13 seconde, mais l'horodatage des lignes est à la seconde."
     },
-    ".opencode/lab/scenario-incident.sh": {
+    "lab/scenario-incident.sh": {
       "status": "créé et validé",
       "last_modified": "2026-10-02",
       "description": "Boucle d'incident : balayage, Telnet en clair, lecture de partage, flot ICMP, balayage de la filiale Corrigé le 2026-10-03 : les deux balayages employaient l'option -e du sondeur avec une adresse, alors qu'elle attend le nom d'une interface ; la commande abandonnait sans émettre le moindre paquet. Les balayages nomment désormais l'interface qui porte la bonne adresse, et les paquets partent de l'adresse que le journal annonce. Contrôle de vérification intégralement passé. Mesures après correction : 50 alertes de balayage depuis 10.10.0.60 vers 10.10.0.30, 9 alertes de session en clair, 4 alertes de partage, 200 alertes de flot de paquets ; alerte environ 0,5 seconde après la ligne de journal ; tour complet d'environ 9 minutes 07, dont 67 secondes d'activité puis 8 minutes d'attente ; aucun mécanisme de relâchement des règles n'existe."
     },
-    ".opencode/lab/regles-detection.rules": {
+    "lab/regles-detection.rules": {
       "status": "créé et validé en direct",
       "last_modified": "2026-10-02",
       "description": "Règles Suricata du laboratoire, produit du livrable alertes-suricata.txt : les quatre identifiants 9000001 à 9000004 ont été observés en direct sur le trafic de l'incident"
     },
-    ".opencode/lab/telecharger-paquets.sh": {
+    "lab/telecharger-paquets.sh": {
       "status": "créé et exécuté",
       "last_modified": "2026-10-02",
       "description": "Téléchargement hors ligne des paquets Debian, 461 paquets, 313 Mio, répertoire ignoré par git"

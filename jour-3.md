@@ -20,7 +20,7 @@ Les deux chapitres forment une chaîne : le premier transforme les anomalies et 
 Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00 :
 
 ```bash
-.opencode/lab/construire-lab.sh monter
+lab/construire-lab.sh monter
 ```
 
 Cette commande recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
@@ -426,12 +426,12 @@ Ce que la sortie prouve : que les deux sources placent le même événement dans
 
 #### Prérequis
 
-**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `.opencode/lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
 
 Pour prouver que le laboratoire est prêt avant de commencer :
 
 ```bash
-.opencode/lab/construire-lab.sh verifier
+lab/construire-lab.sh verifier
 ```
 
 Cette commande contrôle la topologie, les journaux et les droits d’écriture ; elle doit se terminer par « Laboratoire conforme aux attentes des trois journées ». Le LAB ne commence pas avant.
@@ -940,12 +940,12 @@ done
 - Les livrables des jours précédents sont présents et intègres : `~/enquete/cadre-enquete.md`, `~/enquete/capture-reference.pcap`, `~/enquete/inventaire-hotes.txt`, `~/enquete/anomalies.md`, `~/enquete/anomalies.pcap`, `~/enquete/alertes-suricata.txt`, `~/enquete/regle-essai.rules`.
 - Le dossier `~/enquete/` est accessible en écriture pour l’utilisateur `enqueteur`.
 
-**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `.opencode/lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
 
 Pour prouver que le laboratoire est prêt avant de commencer :
 
 ```bash
-.opencode/lab/construire-lab.sh verifier
+lab/construire-lab.sh verifier
 ```
 
 Cette commande contrôle la topologie, les journaux et les droits d’écriture ; elle doit se terminer par « Laboratoire conforme aux attentes des trois journées ». Le LAB ne commence pas avant.

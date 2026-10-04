@@ -44,8 +44,8 @@ __pycache__/
 /export/
 
 # Paquets .deb telecharges pour l'image du laboratoire (regenere par
-# .opencode/lab/telecharger-paquets.sh, plusieurs centaines de Mo)
-.opencode/lab/debs/
+# lab/telecharger-paquets.sh, plusieurs centaines de Mo)
+lab/debs/
 
 # Captures et journaux produits par un execution reelle du laboratoire. Ce sont
 # des preuves d'incident simulees, jamais des livrables du cours, et elles ne
