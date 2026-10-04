@@ -147,10 +147,12 @@ flowchart LR
   E0 --- CP2
   E1 --- CP1
   E1 --- SFR
-  CENTRAL -.->|"aucune session ne s’établit entre les deux segments"| FILIALE
+  CENTRAL -.->|"aucune session ne s’établit<br/>entre les deux segments"| FILIALE
 ```
 
 **Fig 1 — Le point d’observation du chapitre 3, et la double appartenance du poste compromis.**
+
+Ce que le schéma ne montre pas : le nombre de paquets réellement échangés entre ces machines, ni leur ordre, que seule une capture prise au point d’observation convenable peut établir.
 
 Le trait en pointillé entre les deux segments n’est pas un lien : il rappelle qu’aucune session ne s’établit de l’un à l’autre. La capture de ce chapitre ne portera donc que sur `eth0`, et elle verra le trafic que le poste compromis adresse au site central, jamais celui qu’il adresse à sa propre filiale.
 
@@ -248,21 +250,23 @@ Les quatre familles se tiennent côte à côte, et chacune possède son filtre. 
 ```mermaid
 flowchart TD
   ANOM["Une capture à analyser"] --> BASE["Comparer avec la capture de référence"]
-  BASE --> SYN["Beaucoup de ports distincts vers la même destination, en peu de secondes"]
-  BASE --> VOL["Beaucoup de paquets ICMP vers la même destination, répétés sur plusieurs secondes"]
+  BASE --> SYN["Beaucoup de ports distincts<br/>vers la même destination,<br/>en peu de secondes"]
+  BASE --> VOL["Beaucoup de paquets ICMP<br/>vers la même destination,<br/>répétés sur plusieurs secondes"]
   BASE --> TEL["Un dialogue interactif sur le port 23"]
-  BASE --> SMB["Une négociation SMB en clair vers le port 445"]
+  BASE --> SMB["Une négociation SMB<br/>en clair vers le port 445"]
   SYN --> F1["Balayage de ports, T1046"]
   VOL --> F2["Déni de service, T1498.001"]
   TEL --> F3["Session distante en clair, T1021"]
   SMB --> F4["Accès à un partage, T1021.002"]
-  F1 --> LIV["Un fichier d’anomalies, une ligne par famille"]
+  F1 --> LIV["Un fichier d’anomalies,<br/>une ligne par famille"]
   F2 --> LIV
   F3 --> LIV
   F4 --> LIV
 ```
 
 **Fig 2 — Les quatre familles d’anomalies du laboratoire, et le chemin qui mène de la capture au livrable.**
+
+Ce que le schéma ne montre pas : le nombre d’occurrences de chaque famille dans la capture, ni le filtre qui l’isole, que les étapes 8 à 10 établissent une par une.
 
 > **Règle de conservation — une capture qui contient un mot de passe en clair est une preuve sensible.**
 >
@@ -403,6 +407,16 @@ Un écart entre l’inventaire et la capture est un constat d’enquête, pas un
 
 #### Prérequis
 
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+
+```bash
+.opencode/lab/construire-lab.sh monter
+.opencode/lab/construire-lab.sh verifier
+docker exec -it -w /home/enqueteur/enquete flab-enquete bash
+```
+
+La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+
 Ce LAB ne se lance pas tout seul. Il consomme trois fichiers produits le premier jour, et il est important de comprendre pourquoi il en a besoin : ces trois fichiers ne sont pas des données de confort, ce sont les trois sources de vérité du laboratoire. La capture de référence donne la mesure ordinaire, l’inventaire donne la déclaration de service, le cadre d’enquête donne le périmètre.
 
 ```bash
@@ -428,6 +442,33 @@ Si l’un des trois fichiers manque, ou si l’empreinte ne correspond plus, il 
 | Outil de lecture | `tshark` et `capinfos` |
 | Dossier de travail | `~/enquete/` |
 | Durée totale | 50 minutes |
+
+#### Vue d’ensemble du LAB
+
+Le schéma Fig 3 ci-dessous se lit de gauche à droite : il montre d’abord l’étape qui lit la capture du premier jour, puis la fenêtre pendant laquelle la capture reste ouverte, et enfin les étapes qui travaillent sur le fichier obtenu.
+
+```mermaid
+flowchart TD
+  E2["Étape 2.<br/>Ligne de base lue dans<br/>capture-reference.pcap,<br/>la capture du premier jour"]
+  E3["Étape 3.<br/>Ouverture de la capture anomalies.pcap"]
+  E2 --> E3
+  subgraph FENETRE["Étapes 4 à 7 :<br/>tout se passe pendant que<br/>la capture est ouverte"]
+    E4["Étape 4. Balayage de ports"]
+    E5["Étape 5. Session en clair sur le port 23"]
+    E6["Étape 6.<br/>Accès au partage sur le port 445"]
+    E7["Étape 7. Flot de paquets ICMP"]
+    E4 --> E5 --> E6 --> E7
+  end
+  E3 --> E4
+  E7 --> E8["Étape 8.<br/>Fermeture de la capture<br/>et isolement du balayage"]
+  E8 --> E9["Étape 9.<br/>Isolation des anomalies restantes"]
+  E9 --> E10["Étape 10.<br/>Scellement de la capture<br/>et comparaison avec l’inventaire<br/>du premier jour"]
+  E10 --> E11["Étape 11.<br/>Rédaction du fichier anomalies.md"]
+```
+
+**Fig 3 — La fenêtre de capture du LAB, et l’étape qui lit un autre fichier que toutes les autres.**
+
+Ce que le schéma ne montre pas : le contenu des quatre anomalies elles-mêmes, que les étapes 9 à 11 isolent, comparent et rédigent.
 
 #### Étapes du LAB
 
@@ -476,7 +517,9 @@ Une valeur différente de zéro n’est pas une erreur : c’est un constat. Il 
 
 **Étape 3 — Ouvrir la capture d’anomalies (4min)**
 
-Ce que cette étape produit : le fichier `~/enquete/anomalies.pcap`, qui enregistrera tout le trafic des étapes suivantes.
+Ce que cette étape produit : le fichier `~/enquete/anomalies.pcap`, qui enregistrera tout le trafic des étapes suivantes. Le schéma Fig 3 distingue cette étape de toutes les autres : elle ouvre le fichier qui accueillera les quatre anomalies, alors que l’étape précédente a lu un autre fichier, la capture du premier jour.
+
+La figure 1 montre ce que ce point d’observation permet et ce qu’il exclut : le poste compromis y apparaît par son adresse du site central, 10.10.0.60, et jamais par celle de la filiale, 10.20.0.10. Les anomalies que les étapes suivantes produiront depuis ce poste seront donc, dans la capture, des dialogues dont l’origine porte cette adresse du site central.
 
 ```bash
 sudo tcpdump -i eth0 -w ~/enquete/anomalies.pcap -s 0 -n -U &
@@ -490,7 +533,7 @@ Si le fichier n’apparaît pas, l’interface est peut-être nommée autrement.
 
 **Étape 4 — Reproduire le balayage de ports (4min)**
 
-Ce que cette étape produit : quinze segments d’ouverture vers `10.10.0.30`, dont douze vers des ports fermés.
+Ce que cette étape produit : quinze segments d’ouverture vers `10.10.0.30`, dont douze vers des ports fermés. Le schéma Fig 3 situe cette étape à l’intérieur de la fenêtre de capture, avec les trois suivantes : tout ce qu’elles produisent sera écrit dans le même fichier.
 
 ```bash
 nmap -n -Pn -sT --max-retries 1 --host-timeout 20s -p 21,22,23,25,53,80,110,139,143,443,445,993,995,3306,3389 10.10.0.30
@@ -565,6 +608,8 @@ Ce triple comptage du port 23 n’est pas une anomalie du décompte, c’est le 
 **Étape 9 — Isoler la session en clair, le partage et le flot (5min)**
 
 Ce que cette étape mesure : le sens du dialogue sur le port 23, la présence d’une négociation SMB, et la répartition du flot ICMP par tranche d’une seconde.
+
+La figure 2 montre le chemin que cette étape poursuit : le balayage a été isolé à l’étape 8, il reste ici trois familles à isoler, et l’étape 11 les rédige une par une dans le fichier d’anomalies, chacune avec son identifiant de technique.
 
 ```bash
 tcpdump -r ~/enquete/anomalies.pcap -n -c 4 'tcp port 23'
@@ -957,6 +1002,16 @@ Ce qu’elle ne prouve pas : que la règle se déclencherait sur un trafic réel
 - L’inventaire de la veille est disponible : `~/enquete/inventaire-hotes.txt`.
 - Les outils `jq`, `grep`, `awk`, `suricata` et `sha256sum` sont présents sur le poste. Aucun droit particulier n’est nécessaire : le compte `enqueteur` suffit.
 
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+
+```bash
+.opencode/lab/construire-lab.sh monter
+.opencode/lab/construire-lab.sh verifier
+docker exec -it -w /home/enqueteur/enquete flab-enquete bash
+```
+
+La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+
 Si l’un des trois journaux est absent, le laboratoire n’a pas été monté dans son état normal : la journée s’interrompt et le formateur remet le laboratoire en place. Un enquêteur ne travaille pas sur des journaux manquants, il constate leur absence et la consigne.
 
 #### Environnement
@@ -975,11 +1030,38 @@ Si l’un des trois journaux est absent, le laboratoire n’a pas été monté d
 | Journal du moteur de détection | `~/suricata/eve.json` — en lecture seule |
 | Espace de travail | `~/enquete` — seul dossier accessible en écriture |
 
+#### Vue d’ensemble du LAB
+
+Le schéma Fig 4 ci-dessous se lit de gauche à droite : les sources de gauche alimentent le collecteur, le collecteur et le moteur de détection écrivent chacun leur fichier, et le nœud de la filiale désigne ce qui n’entre dans aucun des trois.
+
+```mermaid
+flowchart LR
+  PF["Le pare-feu"]
+  RT["Le routeur"]
+  SRV["Les serveurs"]
+  FIC["Le serveur de fichiers 10.10.0.30"]
+  COL["Le collecteur de journaux 10.10.0.50"]
+  MOTEUR["Le moteur de détection"]
+  PF --> COL
+  RT --> COL
+  SRV --> COL
+  FIC --> COL
+  COL --> F1["~/journal/journal-reseau.log,<br/>en lecture seule"]
+  COL --> F2["~/journal/journal-samba.log,<br/>en lecture seule"]
+  MOTEUR --> F3["~/suricata/eve.json, en lecture seule"]
+  FIL["Filiale 10.20.0.0/24,<br/>le trafic ne traverse pas<br/>l’interface centrale,<br/>il n’entre donc dans aucun<br/>de ces trois fichiers"]
+  FIL -.->|"angle mort"| MOTEUR
+```
+
+**Fig 4 — D’où viennent les journaux du LAB, et l’angle mort du moteur de détection sur la filiale.**
+
+Ce que le schéma ne montre pas : le volume d’alertes, qui dépend du nombre de tours écoulés et n’est jamais une valeur fixe.
+
 #### Étapes du LAB
 
 **Étape 1 — Inventorier les sources (8min)**
 
-L’enquêteur ne lit jamais un dossier dont il ignore le contenu. Les quatre commandes ci-dessous étudient l’état des sources avant toute lecture.
+L’enquêteur ne lit jamais un dossier dont il ignore le contenu. Les quatre commandes ci-dessous étudient l’état des sources avant toute lecture. Le schéma Fig 4 montre d’où viennent ces trois fichiers et où l’enquêteur peut écrire, ce qui évite de chercher à modifier une source qu’il ne possède pas.
 
 ```bash
 ls -l ~/journal/journal-reseau.log ~/journal/journal-samba.log ~/suricata/eve.json
@@ -1028,7 +1110,7 @@ Ce que la sortie doit montrer : un nombre très élevé pour le poste compromis,
 
 **Étape 4 — Extraire les alertes du moteur de détection et mesurer son angle mort (10min)**
 
-L’enquêteur fait parler le fichier du moteur de détection, puis il cherche ce qui n’y figure pas.
+L’enquêteur fait parler le fichier du moteur de détection, puis il cherche ce qui n’y figure pas. Le schéma Fig 4 situe l’angle mort que ces commandes mesurent : le trafic de la filiale n’entre dans aucun des trois fichiers, et il n’en est pas pour autant absent.
 
 ```bash
 jq -r 'select(.event_type=="alert") | .alert.signature_id' ~/suricata/eve.json | sort | uniq -c | sort -nr

@@ -188,10 +188,12 @@ flowchart LR
   ENQ --- PW2
   PW2 --- CPN
   PW2 --- FIL
-  CPN -.->|"seconde interface 10.10.0.60, sens unique sans retour"| FIC
+  CPN -.->|"seconde interface<br/>10.10.0.60,<br/>sens unique sans retour"| FIC
 ```
 
 **Fig 1 — Le laboratoire et la position de l’enquêteur.**
+
+Ce que le schéma ne montre pas : le nombre de paquets réellement échangés entre ces machines, ni l’instant où ils l’ont été, que seule une capture permet de compter et de dater.
 
 La différence entre réseau local et réseau étendu se mesure ici par une seule commande :
 
@@ -235,10 +237,12 @@ flowchart TD
   C --> D["4. Conserver la copie de travail"]
   D --> E["5. Analyser et interpréter"]
   E --> F["6. Restituer et consigner"]
-  C -.->|"toute reprise impose un nouveau scellement"| B
+  C -.->|"toute reprise impose<br/>un nouveau scellement"| B
 ```
 
 **Fig 2 — Le cycle de vie d’une preuve numérique.**
+
+Ce que le schéma ne montre pas : ni la durée de chaque étape, ni le résultat de la vérification d’empreinte, que seule la commande de contrôle d’intégrité peut établir.
 
 > **Règle de conservation — le laboratoire conserve l’empreinte avant la première analyse.**
 >
@@ -324,6 +328,15 @@ La redirection à deux chevrons ouvre le fichier et y écrit le texte ; le mot `
 
 #### Prérequis
 
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les deux commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+
+```bash
+.opencode/lab/construire-lab.sh monter
+.opencode/lab/construire-lab.sh verifier
+```
+
+La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La commande qui ouvre le poste de l’enquêteur est celle qui figure ci-dessous ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+
 Le laboratoire est un ensemble de machines virtuelles isolées, et il doit être monté avant la séance. Le formateur ouvre le poste de travail de l’enquêteur par la commande suivante, exécutée une seule fois, sur la machine qui héberge le laboratoire :
 
 ```bash
@@ -359,6 +372,25 @@ Vérification du compte : `whoami` renvoie `enqueteur`, et `pwd` renvoie `/home/
 | Filiale | 10.20.0.0/24 — passerelle 10.20.0.1, serveur 10.20.0.20 |
 | Outils utilisés | `ip`, `tcpdump`, `tshark`, `nmap`, `capinfos`, `sha256sum`, `date`, `cut`, `nano` |
 | Dossier de travail | `~/enquete` |
+
+#### Vue d’ensemble du LAB
+
+Le schéma Fig 3 ci-dessous se lit de haut en bas : il montre les quatre étapes dans l’ordre où elles sont exécutées, puis la flèche de retour qui ramène de la vérification au cadre lorsque l’empreinte ne concorde pas. Les deux branches latérales nomment la pièce que chaque étape produit.
+
+```mermaid
+flowchart TD
+  E1["Étape 1. Vérifier la place d’observation"] --> E2["Étape 2. Rédiger le cadre de l’enquête"]
+  E2 --> E3["Étape 3.<br/>Sceller et consigner l’acquisition"]
+  E3 --> E4["Étape 4.<br/>Vérifier la chaîne de conservation"]
+  E2 --> P1["Pièce produite, cadre-enquete.md"]
+  E3 --> P2["Pièces produites,<br/>cadre-enquete.sha256 et une ligne<br/>de journal-acquisition.txt"]
+  E4 -.->|"si l’empreinte ne concorde pas"| E2
+  E4 --> FIN["Chaîne de conservation vérifiée"]
+```
+
+**Fig 3 — Les quatre étapes du LAB, et la boucle de contrôle de la chaîne de conservation.**
+
+Ce que le schéma ne montre pas : le contenu du cadre lui-même, qui dépend du périmètre annoncé par le formateur.
 
 #### Étapes du LAB
 
@@ -421,7 +453,7 @@ Dans `nano`, la touche `Ctrl` combinée à la lettre `O` enregistre le fichier, 
 
 **Étape 3 — Sceller le cadre et consigner l’acquisition (8min)**
 
-Un document rédigé sans empreinte ne prouve rien par lui-même. Les deux commandes calculent l’empreinte du fichier et inscrivent l’acquisition au journal.
+Un document rédigé sans empreinte ne prouve rien par lui-même. Les deux commandes calculent l’empreinte du fichier et inscrivent l’acquisition au journal. Le schéma Fig 3 signale cette étape comme celle qui produit deux pièces à la fois, le fichier d’empreinte et une ligne du journal des acquisitions.
 
 ```bash
 sha256sum ~/enquete/cadre-enquete.md > ~/enquete/cadre-enquete.sha256
@@ -434,7 +466,7 @@ La première commande écrit une ligne contenant la valeur de contrôle de 64 ca
 
 **Étape 4 — Vérifier la chaîne de conservation (7min)**
 
-Une empreinte qui n’est jamais vérifiée n’est qu’une chaîne de caractères. La commande de contrôle relit le fichier d’empreinte et recalcule la valeur.
+Une empreinte qui n’est jamais vérifiée n’est qu’une chaîne de caractères. La commande de contrôle relit le fichier d’empreinte et recalcule la valeur. Le schéma Fig 3 situe cette vérification au bout de la boucle du LAB : si le fichier d’empreinte signale un écart, c’est le cadre rédigé à l’étape 2 qu’il faut corriger, puis sceller de nouveau.
 
 ```bash
 sha256sum -c ~/enquete/cadre-enquete.sha256
@@ -608,10 +640,12 @@ flowchart LR
   E0 --- CPN2
   E1 --- CPN1
   E1 --- FIL
-  SEG1 -.->|"aucune session ne s’établit entre les deux segments"| SEG2
+  SEG1 -.->|"aucune session ne s’établit<br/>entre les deux segments"| SEG2
 ```
 
-**Fig 3 — Les deux points d’observation du poste de l’enquêteur, et l’absence de dialogue entre les segments.**
+**Fig 4 — Les deux points d’observation du poste de l’enquêteur, et l’absence de dialogue entre les segments.**
+
+Ce que le schéma ne montre pas : le trafic échangé entre deux machines d’un même segment, qui ne traverse pas l’interface de l’enquêteur et qu’aucune capture prise sur cette interface ne pourra donc établir.
 
 Le trait en pointillé entre les deux segments n’est pas un lien : il rappelle au contraire qu’aucun dialogue ne s’établit entre les deux réseaux. Une passerelle, dans le laboratoire, sait router un paquet d’un segment à l’autre, et une demande peut donc franchir la frontière ; mais la réponse ne revient pas, faute de chemin de retour, et aucune session ne s’ouvre. Une commande du laboratoire ne peut donc faire établir aucune connexion entre 10.10.0.0/24 et 10.20.0.0/24. Ce qui est observable sur `eth0` ne l’est pas sur `eth1`, et la capture de référence devra être organisée en deux fichiers si l’enquête porte sur les deux segments.
 
@@ -754,18 +788,20 @@ flowchart TD
   A["Le paquet entre sur l’interface"] --> B{"Filtre de capture posé ?"}
   B -->|"oui"| C["Le paquet est évalué"]
   C -->|"il ne correspond pas"| D["Le paquet est jeté, définitivement"]
-  C -->|"il correspond"| E["Le paquet est écrit avec sa longueur maximale"]
+  C -->|"il correspond"| E["Le paquet est écrit<br/>avec sa longueur maximale"]
   B -->|"non"| E
   E --> F["Le fichier PCAP est scellé par empreinte"]
   F --> G{"Filtre d’affichage à la lecture ?"}
   G -->|"oui"| H["Seuls les paquets choisis sont montrés"]
   G -->|"non"| I["Tous les paquets sont montrés"]
-  H --> J["Le fichier conserve l’intégralité des paquets écrits"]
+  H --> J["Le fichier conserve l’intégralité<br/>des paquets écrits"]
   I --> J
   D --> K["La preuve n’existe plus"]
 ```
 
-**Fig 4 — Deux filtres, deux effets : le filtre de capture détruit l’information, le filtre d’affichage ne fait que la masquer.**
+**Fig 5 — Deux filtres, deux effets : le filtre de capture détruit l’information, le filtre d’affichage ne fait que la masquer.**
+
+Ce que le schéma ne montre pas : le nombre de paquets écartés par un filtre de capture, ni leur contenu, qui ne pourra plus jamais être consulté une fois le fichier fermé.
 
 #### 5. De la capture à l’inventaire des hôtes, ports et protocoles (14min)
 
@@ -934,6 +970,16 @@ Ce que l’affichage prouve : exactement ce que la ligne de commande prouve, ave
 
 Le laboratoire suppose que le chapitre 1 a été suivi. Le fichier `~/enquete/cadre-enquete.md` existe, il a été complété au clavier puis scellé, et le fichier `~/enquete/cadre-enquete.sha256` permet d’en vérifier l’intégrité à tout instant. Ce cadre est la référence du présent LAB : la capture qui suit se fait sur `eth0`, c’est-à-dire sur le seul segment du site central 10.10.0.0/24, et toute acquisition qui en sortirait devrait être inscrite au journal avec son motif. Une capture ne voit que ce qui passe devant elle : c’est pourquoi ce point d’observation ne montre pas tout, et c’est pourquoi la partie 1 de ce chapitre justifie ce placement plutôt qu’un autre. Le chapitre suivant élargira l’observation, en rapprochant cette capture unique des journaux que d’autres machines ont écrits. Le journal `~/enquete/journal-acquisition.txt`, créé lui aussi par le chapitre 1, est repris ici et complété à l’étape 6.
 
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+
+```bash
+.opencode/lab/construire-lab.sh monter
+.opencode/lab/construire-lab.sh verifier
+docker exec -it -w /home/enqueteur/enquete flab-enquete bash
+```
+
+La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+
 Avant de commencer la capture, l’enquêteur vérifie que la pièce produite ce matin est intacte, et que le journal contient déjà une ligne.
 
 ```bash
@@ -958,11 +1004,40 @@ cat ~/enquete/journal-acquisition.txt
 | Outils utilisés | `ip`, `tcpdump`, `tshark`, `nmap`, `iperf3`, `capinfos`, `sha256sum`, `date`, `cut`, `nano`. Wireshark est installé mais n’est pas exécutable ici, faute d’affichage : c’est `tshark` qui assure la lecture des captures dans ce LAB |
 | Dossier de travail | `~/enquete` |
 
+#### Vue d’ensemble du LAB
+
+Le schéma Fig 6 ci-dessous se lit de gauche à droite et par deux couloirs : à gauche le trafic que les étapes produisent, à droite la capture qui s’ouvre, se remplit et se ferme. Les deux flèches en pointillés disent dans quel sens le trafic et la capture s’alimentent l’un l’autre.
+
+```mermaid
+flowchart TD
+  subgraph COULOIRB["Le trafic, produit pendant la capture"]
+    N2["Étape 2.<br/>Sondage nmap des hôtes et des ports"]
+    I3["Étape 3.<br/>Client de mesure de débit iperf3"]
+    N2 --> I3
+  end
+  subgraph COULOIRA["La capture, ouverte à l’étape 3"]
+    OUV["Étape 3. Ouverture sur l’interface eth0"]
+    FIC["Écriture du fichier<br/>capture-reference.pcap"]
+    ET4["Capture ouverte<br/>pendant les étapes 3 et 4"]
+    FER["Étape 6. Fermeture de la capture"]
+    OUV --> FIC --> ET4 --> FER
+  end
+  I3 -.->|"le trafic remplit la capture"| ET4
+  ET4 -.->|"la capture enregistre<br/>ce que le trafic produit"| I3
+  FER --> FIN["Les deux fichiers<br/>sont scellés à l’étape 6"]
+```
+
+**Fig 6 — Les deux couloirs du LAB, et ce qui se passe en même temps pendant la capture.**
+
+Ce que le schéma ne montre pas : ni le contenu des paquets, ni l’ordre exact des commandes, qui figure dans les étapes.
+
 #### Étapes du LAB
 
 **Étape 1 — Préparer le dossier de travail et le lieu de la capture (12min)**
 
 L’enquêteur se place d’abord dans le dossier de l’enquête, note l’heure en temps universel, vérifie ce qui s’y trouve déjà, et confirme que l’interface de capture est active. Cette étape paraît modeste ; elle est celle qui évite les deux erreurs les plus coûteuses : écrire au mauvais endroit, et capturer avec une interface éteinte.
+
+La figure 4 justifie le choix de cette interface : elle montre les deux points d’observation du poste, un par segment, et rappelle que le trafic échangé entre deux autres machines d’un même segment ne lui parvient pas. La capture ne verra donc que ce que le poste émet lui-même, ce qu’il reçoit, et les trames qui lui sont diffusées.
 
 ```bash
 cd ~/enquete
@@ -996,7 +1071,7 @@ Deux limites du sondage doivent être comprises avant de l’interpréter. Un so
 
 **Étape 3 — Produire la capture de référence (13min)**
 
-Le cœur du LAB. La capture s’ouvre sans aucun filtre, et un trafic connu est produit en parallèle pour que le fichier contienne un repère identifiable. Les commandes qui suivent sont saisies ensemble, dans cet ordre.
+Le cœur du LAB. La capture s’ouvre sans aucun filtre, et un trafic connu est produit en parallèle pour que le fichier contienne un repère identifiable. Les commandes qui suivent sont saisies ensemble, dans cet ordre. Le schéma Fig 6 montre ces deux mouvements côte à côte, le trafic produit par le client de mesure de débit et la capture qui l’enregistre ; la capture reste ouverte pendant les étapes 3 et 4, et n’est fermée qu’à l’étape 6.
 
 ```bash
 sudo tcpdump -i eth0 -w ~/enquete/capture-reference.pcap -s 0 -n -U -c 300 &
@@ -1014,6 +1089,8 @@ Un point mérite d’être compris ici, car il revient dans tout travail d’enq
 La quatrième commande rend le fichier au compte de l’enquêteur, et la dernière vérifie le résultat. Ce changement de propriétaire est délibéré : la capture est écrite par le compte `tcpdump`, et l’enquêteur doit pouvoir copier, déplacer et sceller son livrable sans avoir à demander un privilège. Aucun fichier du dossier de l’enquête n’appartient ainsi à un compte d’outil.
 
 Aucun filtre n’est posé sur cette capture, et c’est un choix délibéré. Un filtre de capture écarte définitivement ce qu’il ne retient pas ; une preuve prise sous filtre n’est pas une preuve incomplète, c’est une preuve qui ne dit plus ce qu’elle couvre. Le laboratoire capture donc large, et filtre à la lecture, où l’opération reste réversible.
+
+La figure 5 rend ce contraste visible : le paquet écarté par un filtre de capture disparaît du fichier et ne peut plus être relu, tandis qu’un filtre d’affichage, comme ceux de l’étape 4, ne retire rien au fichier et ne fait que choisir ce qu’il montre.
 
 > **Résultat attendu :** le fichier `~/enquete/capture-reference.pcap` existe, il appartient au compte `enqueteur`, et il pèse de l’ordre de deux cent dix mille octets : les trois cents paquets capturés se composent de segments de données d’environ 1 500 octets et d’accusés de réception d’environ 70 octets, ce qui donne ce volume. Les métadonnées annoncent trois cents paquets, aucun paquet perdu par le noyau, et un intervalle de quelques centièmes de seconde entre le premier et le dernier. Un intervalle aussi court est normal ici : la capture s’arrête au compteur, pas au bout des dix secondes de mesure. Le fichier contient le début des échanges de mesure de débit vers le port 5201, reconnaissables à leur volume, ainsi que leurs ouvertures de session.
 
@@ -1071,7 +1148,7 @@ L’honnêteté de l’inventaire se joue ici. Le port 23 du serveur de fichiers
 
 **Étape 6 — Sceller les deux fichiers et compléter le journal (12min)**
 
-Un fichier d’enquête sans empreinte ne prouve rien. Les quatre commandes qui suivent scellent les deux livrables, les inscrivent au journal des acquisitions, puis relisent les empreintes.
+Un fichier d’enquête sans empreinte ne prouve rien. Les quatre commandes qui suivent scellent les deux livrables, les inscrivent au journal des acquisitions, puis relisent les empreintes. C’est au même endroit que le schéma Fig 6 place le scellement, après la fermeture de la capture et non pendant.
 
 ```bash
 sha256sum ~/enquete/capture-reference.pcap > ~/enquete/capture-reference.pcap.sha256

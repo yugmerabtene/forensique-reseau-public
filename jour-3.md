@@ -250,22 +250,22 @@ Les quatre parties de ce chapitre décrivent toutes le même tour : leur ordre f
 
 ```mermaid
 flowchart TD
-  CP["Poste compromis, 10.20.0.10 sur la filiale et 10.10.0.60 sur le site central"]
-  T["Début du tour, durée inférieure à une minute et demie"]
+  CP["Poste compromis,<br/>10.20.0.10 sur la filiale<br/>et 10.10.0.60 sur le site central"]
+  T["Début du tour,<br/>durée inférieure à une minute<br/>et demie"]
   CP --> T
-  T --> G1["1. Balayage de ports de 10.10.0.60 vers le serveur de fichiers 10.10.0.30"]
+  T --> G1["1. Balayage de ports<br/>de 10.10.0.60 vers le serveur<br/>de fichiers 10.10.0.30"]
   G1 --> V["Vecteur d’intrusion, geste 1"]
-  G1 --> G2["2. Première tentative de session en clair vers le port 23"]
-  G2 --> G3["3. Seconde tentative de session en clair vers le port 23"]
+  G1 --> G2["2. Première tentative<br/>de session en clair<br/>vers le port 23"]
+  G2 --> G3["3. Seconde tentative<br/>de session en clair<br/>vers le port 23"]
   G3 --> G4["4. Lecture du partage sur le port 445"]
-  G4 --> G5["5. Flot de paquets ICMP vers le serveur applicatif 10.10.0.20"]
-  G5 --> G6["6. Balayage du serveur de la filiale 10.20.0.20 depuis 10.20.0.10"]
+  G4 --> G5["5. Flot de paquets ICMP<br/>vers le serveur applicatif<br/>10.10.0.20"]
+  G5 --> G6["6. Balayage du serveur<br/>de la filiale 10.20.0.20<br/>depuis 10.20.0.10"]
   G6 --> W["Attente d’environ huit minutes"]
-  W --> T2["Début du tour suivant, 9 minutes et 7 secondes plus tard"]
+  W --> T2["Début du tour suivant,<br/>9 minutes et 7 secondes<br/>plus tard"]
   T2 --> T
-  G2 --> NC["La session en clair est une conséquence du balayage, non sa cause"]
+  G2 --> NC["La session en clair est<br/>une conséquence du balayage,<br/>non sa cause"]
   subgraph OBS["Point d’observation de l’enquêteur"]
-    E["eth0 en 10.10.0.10, sur le segment 10.10.0.0/24"]
+    E["eth0 en 10.10.0.10,<br/>sur le segment 10.10.0.0/24"]
   end
   E -.-> G1
   E -.-> G5
@@ -274,7 +274,7 @@ flowchart TD
 
 **Fig 1 — Les six gestes d’un tour de l’incident, et ce que le point d’observation de l’enquêteur en voit.**
 
-Ce que la figure ne montre pas : ni la durée de chaque geste, ni la seconde exacte de son exécution, que seuls les journaux d’actions donnent. Elle ne montre pas les huit minutes d’attente autrement que par une case sans aucun geste. Enfin, elle désigne le vecteur au geste 1 ; le geste 2 n’en est pas la cause, il en est la conséquence, et le trait qui les relie dit précisément cela.
+Ce que le schéma ne montre pas : ni la durée de chaque geste, ni la seconde exacte de son exécution, que seuls les journaux d’actions donnent. Elle ne montre pas les huit minutes d’attente autrement que par une case sans aucun geste. Enfin, elle désigne le vecteur au geste 1 ; le geste 2 n’en est pas la cause, il en est la conséquence, et le trait qui les relie dit précisément cela.
 
 ### Les techniques, pas à pas
 
@@ -422,6 +422,16 @@ Ce que la sortie prouve : que les deux sources placent le même événement dans
 
 #### Prérequis
 
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+
+```bash
+.opencode/lab/construire-lab.sh monter
+.opencode/lab/construire-lab.sh verifier
+docker exec -it -w /home/enqueteur/enquete flab-enquete bash
+```
+
+La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+
 Ce LAB est le point de convergence des deux premiers jours. Il ne peut pas commencer tant que les deux livrables de la veille ne sont pas disponibles et intacts : `~/enquete/anomalies.md`, qui porte les quatre anomalies et leurs filtres, et `~/enquete/alertes-suricata.txt`, qui porte la répartition des alertes par règle, leur croisement avec les adresses d’origine et l’angle mort du détecteur sur la filiale. Le fichier `~/enquete/journal-acquisition.txt`, créé le premier jour, doit contenir au moins une ligne.
 
 ```bash
@@ -447,6 +457,30 @@ Si l’une des deux empreintes ne se vérifie plus, le LAB s’arrête : une chr
 | Outils du LAB | `tcpdump`, `capinfos`, `jq`, `grep`, `awk`, `ip`, `ping`, `sha256sum`, `date` |
 | Durée totale | 48 minutes |
 
+#### Vue d’ensemble du LAB
+
+Le schéma Fig 2 ci-dessous se lit de gauche à droite : les étapes 2, 3 et 4 s’enchaînent, et la fenêtre de seize minutes ouvre sur les deux seules choses que la capture voit, ou ne voit pas.
+
+```mermaid
+flowchart TD
+  E2["Étape 2.<br/>Ouverture de la capture incident.pcap<br/>sur l’interface eth0<br/>du poste 10.10.0.10"]
+  FEN["Fenêtre de seize minutes,<br/>celle des étapes 2 et 3"]
+  E3["Étape 3.<br/>Coupure du contact,<br/>sans éteindre la machine"]
+  E4["Étape 4.<br/>Fermeture de la capture<br/>et copie de la preuve"]
+  E2 --> FEN
+  FEN --> E3
+  FEN --> VOIT["Ce que la capture voit,<br/>le trafic du site central 10.10.0.0/24"]
+  VOIT --x|"jamais traversé"| NEVOIT["Ce qu’elle ne voit pas,<br/>le trafic entre 10.20.0.10<br/>et 10.20.0.20 sur la filiale<br/>10.20.0.0/24"]
+  E3 --> E4
+  E4 --> E5["Étape 5.<br/>Extraction du vecteur<br/>et mesure de l’écart<br/>entre les sources"]
+  E5 --> E6["Étape 6.<br/>Rédaction, scellement<br/>et consignation de la chronologie"]
+  linkStyle 3 stroke-dasharray:6 4
+```
+
+**Fig 2 — La fenêtre d’observation du LAB, ce qu’elle contient et ce qu’elle ne voit pas.**
+
+Ce que le schéma ne montre pas : les horaires des gestes, qui sont propres à chaque exécution et se lisent dans le journal des gestes.
+
 #### Étapes du LAB
 
 **Étape 1 — Faire l’inventaire des pièces et ouvrir le journal des gestes (8min)**
@@ -467,7 +501,7 @@ cat ~/enquete/journal-actions.txt
 
 **Étape 2 — Ouvrir la capture d’incident avant tout geste (8min)**
 
-La capture s’ouvre avant toute action : ce qu’il n’y aura pas été au moment de l’ouverture ne se rattrape pas.
+La capture s’ouvre avant toute action : ce qu’il n’y aura pas été au moment de l’ouverture ne se rattrape pas. Le schéma Fig 2 montre cette ouverture et la fermeture qui vient à l’étape 4, avec la fenêtre de seize minutes pendant laquelle la capture reste ouverte.
 
 ```bash
 sudo tcpdump -i eth0 -w ~/enquete/incident.pcap -s 0 -n -U &
@@ -484,7 +518,7 @@ printf '%s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "ouverture 
 
 **Étape 3 — Couper le contact sans éteindre la machine (8min)**
 
-L’isolement s’applique ici à la seule machine que l’enquêteur administre, et il se mesure en trois temps : avant, pendant, après. Les trois blocs doivent être exécutés d’une traite.
+L’isolement s’applique ici à la seule machine que l’enquêteur administre, et il se mesure en trois temps : avant, pendant, après. Les trois blocs doivent être exécutés d’une traite. Le schéma Fig 2 place cette coupure à l’intérieur de la fenêtre de capture : l’interface s’arrête, le fichier continue de s’écrire, et ce que la capture ne voit pas ne le devient pas pour autant.
 
 ```bash
 sudo ping -c 4 -i 0.3 -W 1 10.10.0.30 > /dev/null
@@ -538,6 +572,8 @@ printf '%s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "fermeture 
 **Étape 5 — Extraire le vecteur et mesurer l’écart entre les sources (8min)**
 
 L’enquêteur rassemble maintenant les deux sources de la veille et mesure ce qu’elles peuvent prétendre de leur précision commune.
+
+La figure 1 donne l’ordre des six gestes d’un tour et le point d’observation qui les voit, ou ne les voit pas ; c’est cet ordre que les deux premières commandes relisent ici. Le sixième geste, le balayage de la filiale, n’apparaît dans aucune des deux sources : c’est de là que vient l’angle mort que le rapport devra signaler.
 
 ```bash
 grep 'poste-compromis' ~/journal/journal-reseau.log | grep -vE 'démarré|tour terminé' | head -n 6
@@ -747,37 +783,34 @@ Cette structure est imposée par le syllabus (M6). Elle est respectée stricteme
 La figure ci-dessous montre les neuf sections dans l’ordre du rapport et, pour chacune, la pièce dont les faits sont tirés. Le schéma se lit de haut en bas, par groupes de trois sections : chaque groupe répond à une question, et le nœud relié en pointillés à droite d’une section nomme le fichier qui l’alimente.
 
 ```mermaid
-flowchart TD
-  R["Rapport d’enquête réseau"]
+flowchart LR
+  R["Rapport d’enquête réseau,<br/>neuf sections"]
+  subgraph A["Sections 1 à 3,<br/>ce que l’enquêteur a fait"]
+    direction TD
+    S1["1. Identification<br/>de l’enquête"] --> F1["cadre-enquete.md<br/>cadre du premier jour"]
+    S2["2. Périmètre"] --> F2["cadre-enquete.md<br/>chronologie-incident.md<br/>cadre et périmètre affecté"]
+    S3["3. Méthodologie"] --> F3["journal-actions.txt<br/>techniques du chapitre 5<br/>gestes consignés"]
+  end
+  subgraph B["Sections 4 à 6,<br/>ce que l’enquêteur a constaté"]
+    direction TD
+    S4["4. Chronologie"] --> F4["chronologie-incident.md<br/>ordre des faits"]
+    S5["5. Analyse"] --> F5["alertes-suricata.txt<br/>journal-samba.log<br/>anomalies.md<br/>recoupement des sources"]
+    S6["6. Résultats"] --> F6["anomalies.md<br/>alertes-suricata.txt<br/>faits établis et non établis"]
+  end
+  subgraph C["Sections 7 à 9,<br/>ce que le rapport promet<br/>et ce qu’il prouve"]
+    direction TD
+    S7["7. Recommandations"] --> F7["anomalies.md<br/>constats à corriger"]
+    S8["8. Traçabilité"] --> F8["journal-acquisition.txt<br/>fichiers scellés<br/>pièces et empreintes"]
+    S9["9. Conformité"] --> F9["journal-actions.txt<br/>journal-acquisition.txt<br/>règles appliquées"]
+  end
   R --> A
   R --> B
   R --> C
-  subgraph A["Sections 1 à 3, ce que l’enquêteur a fait"]
-    direction LR
-    S1["1. Identification de l’enquête"] --> S2["2. Périmètre"] --> S3["3. Méthodologie"]
-  end
-  subgraph B["Sections 4 à 6, ce que l’enquêteur a constaté"]
-    direction LR
-    S4["4. Chronologie"] --> S5["5. Analyse"] --> S6["6. Résultats"]
-  end
-  subgraph C["Sections 7 à 9, ce que le rapport promet et ce qu’il prouve"]
-    direction LR
-    S7["7. Recommandations"] --> S8["8. Traçabilité"] --> S9["9. Conformité"]
-  end
-  S1 -.->|"cadre du premier jour"| F1["cadre-enquete.md"]
-  S2 -.->|"cadre et périmètre affecté"| F2["cadre-enquete.md et chronologie-incident.md"]
-  S3 -.->|"gestes consignés"| F3["journal-actions.txt et techniques du chapitre 5"]
-  S4 -.->|"ordre des faits"| F4["chronologie-incident.md"]
-  S5 -.->|"recoupement des sources"| F5["alertes-suricata.txt, journal-samba.log et anomalies.md"]
-  S6 -.->|"faits établis et non établis"| F6["anomalies.md et alertes-suricata.txt"]
-  S7 -.->|"constats à corriger"| F7["anomalies.md"]
-  S8 -.->|"pièces et empreintes"| F8["journal-acquisition.txt et fichiers scellés"]
-  S9 -.->|"règles appliquées"| F9["journal-actions.txt et journal-acquisition.txt"]
 ```
 
-**Fig 2 — Les neuf sections du rapport d’enquête, et la pièce qui alimente chacune d’elles.**
+**Fig 3 — Les neuf sections du rapport d’enquête, et la pièce qui alimente chacune d’elles.**
 
-Ce que la figure ne montre pas : ni la longueur de chaque section, ni le nombre de lignes qu’elle occupe dans le fichier rédigé, qui dépendent de la formulation de l’enquêteur et ne constituent pas une contrainte. Elle ne montre pas l’ordre des événements : l’ordre des sections est celui du raisonnement, non celui de la chronologie. Elle ne montre pas davantage la réserve de précision, qui figure au sein de la section 4 et non dans une section à part entière.
+Ce que le schéma ne montre pas : ni la longueur de chaque section, ni le nombre de lignes qu’elle occupe dans le fichier rédigé, qui dépendent de la formulation de l’enquêteur et ne constituent pas une contrainte. Elle ne montre pas l’ordre des événements : l’ordre des sections est celui du raisonnement, non celui de la chronologie. Elle ne montre pas davantage la réserve de précision, qui figure au sein de la section 4 et non dans une section à part entière.
 
 #### 3. Analyse et résultats (14min)
 
@@ -897,6 +930,16 @@ done
 - Les livrables des jours précédents sont présents et intègres : `~/enquete/cadre-enquete.md`, `~/enquete/capture-reference.pcap`, `~/enquete/inventaire-hotes.txt`, `~/enquete/anomalies.md`, `~/enquete/anomalies.pcap`, `~/enquete/alertes-suricata.txt`, `~/enquete/regle-essai.rules`.
 - Le dossier `~/enquete/` est accessible en écriture pour l’utilisateur `enqueteur`.
 
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+
+```bash
+.opencode/lab/construire-lab.sh monter
+.opencode/lab/construire-lab.sh verifier
+docker exec -it -w /home/enqueteur/enquete flab-enquete bash
+```
+
+La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+
 #### Environnement
 
 | Élément | Valeur |
@@ -910,11 +953,32 @@ done
 | Poste compromis | `10.20.0.10` et `10.10.0.60` |
 | Serveur de la filiale | `10.20.0.20` (ports 22, 80) |
 
+#### Vue d’ensemble du LAB
+
+Le schéma Fig 4 ci-dessous se lit de haut en bas : il monte les quatre niveaux par lesquels une affirmation doit passer pour entrer dans un rapport, et la branche de gauche montre ce qui arrive à une section qui cite une pièce non scellée.
+
+```mermaid
+flowchart TD
+  N1["Niveau 1.<br/>Pièce scellée, le fichier<br/>et son fichier d’empreinte,<br/>tous deux présents dans ~/enquete/"]
+  N2["Niveau 2.<br/>Constat rédigé,<br/>la chronologie<br/>ou le fichier d’anomalies"]
+  N3["Niveau 3.<br/>Section du rapport,<br/>alimentée par le constat"]
+  N4["Niveau 4.<br/>Contrôle de conformité,<br/>les neuf sections attendues<br/>sont présentes"]
+  N1 --> N2
+  N2 --> N3
+  N3 --> N4
+  N1 -.-> REF["Section refusée,<br/>une pièce non scellée<br/>ne peut pas être citée"]
+  REF -.->|"Pas de citation"| N3
+```
+
+**Fig 4 — La règle qui gouverne l’écriture : on ne cite que des pièces déjà scellées.**
+
+Ce que le schéma ne montre pas : la rédaction elle-même, ni le nombre de pages du rapport.
+
 #### Étapes du LAB
 
 **Étape 1 — Préparer le gabarit du rapport (8min)**
 
-L’enquêteur affiche le gabarit des neuf sections obligatoires et s’assure qu’il dispose de toutes les pièces citées. Il vérifie également l’intégrité des fichiers sur lesquels il va s’appuyer.
+L’enquêteur affiche le gabarit des neuf sections obligatoires et s’assure qu’il dispose de toutes les pièces citées. Il vérifie également l’intégrité des fichiers sur lesquels il va s’appuyer. Le schéma Fig 4 montre la règle que cette étape applique : une section ne peut s’appuyer que sur une pièce scellée, dont le fichier et le fichier d’empreinte sont tous deux présents.
 
 *Explication :* le rapport est écrit à partir des faits établis par l’enquêteur, et les blocs de commandes ne font que les transcrire. Le gabarit sert uniquement à garantir la complétude des sections.
 
@@ -945,6 +1009,8 @@ sha256sum -c ~/enquete/incident.pcap.sha256 2>&1 | tail -1
 **Étape 2 — Rédiger l’identification, le périmètre et la méthodologie (8min)**
 
 L’enquêteur recopie le gabarit dans le fichier définitif `~/enquete/rapport-enquete.md` et remplit les trois premières sections à partir du cadre d’enquête et des gestes effectués. Le bloc de commandes ci-dessous transcrit ces trois sections : l’enquêteur dicte le texte, la commande l’écrit.
+
+La figure 3 indique la pièce qui alimente chacune de ces trois sections : le cadre du premier jour pour l’identification et le périmètre, le journal des gestes pour la méthodologie.
 
 *Explication :* ces sections expliquent au tiers ce qui a été fait, dans quel ordre, et sur quoi. Elles ne décrivent pas encore les événements.
 
@@ -1079,7 +1145,7 @@ wc -l ~/enquete/rapport-enquete.md
 
 **Étape 6 — Sceller le rapport et contrôler sa conformité (9min)**
 
-L’enquêteur scelle le rapport d’enquête en calculant son empreinte, la vérifie, l’ajoute au journal des acquisitions, puis effectue un contrôle automatique de présence des sections obligatoires.
+L’enquêteur scelle le rapport d’enquête en calculant son empreinte, la vérifie, l’ajoute au journal des acquisitions, puis effectue un contrôle automatique de présence des sections obligatoires. Le schéma Fig 4 place ce contrôle au quatrième niveau : il porte sur la forme du rapport, jamais sur la valeur d’une pièce déjà vérifiée.
 
 *Explication :* le rapport est lui-même un livrable scellé. Le contrôle de conformité vérifie que toutes les neuf sections attendues sont bien présentes dans le fichier rédigé.
 
