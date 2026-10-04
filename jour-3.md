@@ -60,9 +60,10 @@ Cette journée ne part pas de zéro : elle consomme les deux livrables de la jou
 ## Chapitre 5 — M5 : Répondre à un incident de sécurité réseau (9h00–12h00)
 
 ### Préambule — répondre à l’incident sans détruire la preuve
-L’erreur classique, celle qui condamne une enquête, consiste à agir dans le désordre. Un administrateur inquiet coupe le câble de la machine compromise : le geste arrête peut-être l’intrus, mais il emporte avec lui tout ce qui n’avait pas encore été mis à l’abri, et il laisse un trou de plusieurs minutes dans le dossier. Le réseau ajoute une difficulté propre à l’informatique : le scénario qui rejoue l’incident dans ce laboratoire revient environ toutes les neuf minutes et sept secondes (9 min 07 s), et il recommencera demain sans demander l’autorisation. L’enquêteur ne peut pas tout voir ; il doit choisir ce qu’il garde, et il doit écrire ce qu’il a choisi.
 
-Reste une question à laquelle presque personne ne répond vite : qui a fait quoi, et quand. Un geste non écrit est un geste qui n’a pas eu lieu. C’est pour cela que ce chapitre ne commence pas par une commande de capture, mais par une décision écrite, et par `~/enquete/journal-actions.txt`, où chaque acte de la journée sera consigné avec son instant et son auteur. Ce fichier sera relu au chapitre suivant, et il y figurera des gestes que l’enquêteur préférera ne pas avoir faits.
+L’erreur classique, celle qui condamne une enquête, consiste à agir dans le désordre. Un administrateur inquiet coupe le câble de la machine compromise : le geste arrête peut-être l’intrus, mais il emporte avec lui tout ce qui n’avait pas encore été mis à l’abri, et il laisse un trou de plusieurs minutes dans le dossier. Le réseau ajoute une difficulté propre à l’informatique : le scénario qui rejoue l’incident dans ce laboratoire revient environ toutes les neuf minutes et sept secondes (9 min 07 s), et il continuera de se rejouer sans demander l’autorisation. L’enquêteur ne peut pas tout voir ; il doit choisir ce qu’il garde, et il doit écrire ce qu’il a choisi.
+
+Reste une question à laquelle presque personne ne répond vite : qui a fait quoi, et quand. Un geste non écrit est un geste qui n’a pas eu lieu. C’est pour cela que ce chapitre ne commence pas par une commande de capture, mais par une décision écrite et deux documents : `~/enquete/journal-actions.txt`, qui consigne chaque acte de la journée avec son instant et son auteur, et `~/enquete/chronologie-incident.md`, que le chapitre 6 transforme en rapport d’enquête. Le journal des gestes sera relu au chapitre suivant : il y figurera des gestes que l’enquêteur préférera ne pas avoir faits.
 
 ### Le vocabulaire en clair
 
@@ -137,7 +138,7 @@ L’isolement a un coût que peu de gens énoncent : il crée un angle mort. Une
 
 L’anomalie de segmentation du laboratoire appartient à cette partie, et non à une autre. Le poste compromis porte deux adresses : `10.20.0.10` sur le segment de la filiale et `10.10.0.60` sur le segment du site central. Une machine de la filiale ne devrait pas joindre directement les serveurs du site central. Cette double appartenance est la raison pour laquelle l’intrus, parti de la filiale, a pu atteindre le serveur de fichiers et le serveur applicatif du site central sans passer par aucune passerelle. Corriger cette faiblesse de conception ne fait pas partie de la réponse immédiate, mais la signaler fait partie du rapport : une récidive est prévisible tant que la porte reste ouverte.
 
-Un enquêteur ne fait pas lui-même ce travail de correction. Il n’administre pas le poste compromis, il ne dispose d’aucun droit sur lui, et il ne doit surtout pas l’ouvrir. Dans le laboratoire, la seule machine dont il a la charge est son propre poste ; c’est donc là qu’il applique la mesure, et il vérifie sur elle ce que le module demande de vérifier : que le contact est coupé, que l’acquis est intact, et que la remise en service est effective.
+Un enquêteur ne fait pas lui-même ce travail de correction. Il n’administre pas le poste compromis, il ne dispose d’aucun droit sur lui, et il ne doit surtout pas l’ouvrir. Dans le laboratoire, la seule machine dont il a la charge est son propre poste ; c’est donc là qu’il applique la mesure, et il vérifie sur elle ce que ce chapitre demande de vérifier : que le contact est coupé, que l’acquis est intact, et que la remise en service est effective.
 
 ```bash
 ping -c 2 -W 1 10.10.0.60 > /dev/null && printf 'contact établi\n'
@@ -151,7 +152,7 @@ ping -c 2 -W 1 10.10.0.60 > /dev/null && printf 'contact rétabli\n'
 
 > **Résultat attendu :** quatre lignes, dans cet ordre. La première annonce que le contact est établi, la deuxième est l’état de l’interface, qui affiche `DOWN` entre crochets, la troisième annonce que le contact est coupé, et la quatrième annonce qu’il est rétabli. Les trois dernières commandes doivent être exécutées ensemble : si le poste était laissé déconnecté par une interruption, il le resterait jusqu’à la remise en service manuelle.
 >
-> Ce que la démonstration prouve, et c’est ce que le module demande : une coupure de contact est réversible, elle ne demande pas d’arrêter la machine, et elle n’efface rien de ce qui a déjà été observé. Ce qu’elle ne prouve pas : que le poste compromis lui-même a été isolé. L’enquêteur n’a pas ce pouvoir, et il doit l’écrire dans son dossier plutôt que de le laisser croire.
+> Ce que la démonstration prouve, et c’est ce que ce chapitre demande : une coupure de contact est réversible, elle ne demande pas d’arrêter la machine, et elle n’efface rien de ce qui a déjà été observé. Ce qu’elle ne prouve pas : que le poste compromis lui-même a été isolé. L’enquêteur n’a pas ce pouvoir, et il doit l’écrire dans son dossier plutôt que de le laisser croire.
 
 #### 2. La collecte : ce qui se conserve, dans quel ordre, avec quelle horodatation (14min)
 
@@ -496,7 +497,7 @@ Ce que le schéma ne montre pas : les horaires des gestes, qui sont propres à c
 
 **Étape 1 — Faire l’inventaire des pièces et ouvrir le journal des gestes (8min)**
 
-L’enquêteur ne commence jamais par une action : il commence par savoir ce qu’il a, et par ouvrir le registre où il notera ce qu’il fera.
+L’enquêteur ne commence jamais par une action : il commence par savoir ce qu’il a, et par ouvrir le journal des gestes où il notera ce qu’il fera.
 
 ```bash
 ls -lt --time-style=full-iso ~/enquete
@@ -718,6 +719,7 @@ La capture `~/enquete/incident.pcap` a été ouverte pendant seize minutes et co
 ## Chapitre 6 — M6 : Rédiger le rapport d’enquête réseau (13h00–16h00)
 
 ### Préambule — transformer la chronologie en un rapport
+
 La chronologie produite au chapitre 5 est un document de travail : elle ordonne les faits, elle nomme les sources et elle précise la réserve de précision. Ce n’est pas encore un rapport d’enquête. Un rapport s’adresse à un destinataire qui n’a pas participé aux gestes : il doit exposer le périmètre, la méthodologie, l’analyse, les résultats, les recommandations, la traçabilité et la conformité, sans supposer que le lecteur connaît le laboratoire.
 
 Ce chapitre transforme donc `~/enquete/chronologie-incident.md` en un rapport d’enquête complet, que l’enquêteur dicte et dont les blocs de commandes du LAB assurent la transcription. Il ne produit aucune mesure nouvelle : il organise des faits déjà prouvés, déjà scellés et déjà inscrits dans les journaux. Il respecte la chaîne de conservation en ne réécrivant jamais les pièces originales, et il cite toujours les chemins des fichiers qui les prouvent.

@@ -60,7 +60,8 @@ Les deux chapitres de la journée forment une chaîne. Le cadre écrit le matin 
 ## Chapitre 1 — M1 : Introduction à la forensique réseau (9h00–11h00)
 
 ### Préambule — fixer le périmètre avant de toucher aux machines
-L’enquêteur arrive sur un réseau qui n’attend pas. Le trafic continue pendant qu’il regarde, les journaux se remplacent, les connexions se referment et ne laissent qu’un souvenir partiel : on ne peut pas demander au réseau de se mettre en pause pour être photographié. Sa première décision n’a rien de technique. Il délimite ce qu’il va examiner, il se place où il peut le voir, et il note ce qu’il a vu.
+
+L’enquêteur arrive sur un réseau qui ne s’arrête pas. Le trafic continue pendant qu’il regarde, les journaux se remplacent, les connexions se referment et ne laissent qu’un souvenir partiel : on ne peut pas demander au réseau de se mettre en pause pour être photographié. Sa première décision n’a rien de technique. Il délimite ce qu’il va examiner, il se place où il peut le voir, et il note ce qu’il a vu.
 
 Ce chapitre ne demande aucune compétence nouvelle. Il donne le vocabulaire de l’enquête numérique et fait écrire à chaque participant le document qui fixe le périmètre, `~/enquete/cadre-enquete.md`, première pièce du dossier. Ce document sera relu à 11h00, et la capture de l’après-midi obéira à ses limites. Un enquêteur qui commence par capturer avant d’avoir écrit son périmètre capture souvent la mauvaise chose, avec beaucoup de rigueur et pour rien.
 
@@ -85,6 +86,7 @@ Ce chapitre ne demande aucune compétence nouvelle. Il donne le vocabulaire de l
 | Empreinte numérique | Une valeur de contrôle calculée sur un fichier, qui change si le fichier change d’un seul octet | Partie 4 |
 | Scellement | L’opération qui consiste à calculer l’empreinte d’une preuve dès sa collecte, afin qu’aucune modification ultérieure ne soit possible | Partie 4 |
 | Horodatage | La date et l’heure, en temps universel, auxquelles un fait est rattaché | Partie 4 |
+| Chaîne de conservation | Le suivi de la pièce elle-même : qui l’a prise en charge, qui l’a reçue ensuite, et où elle a été conservée entre deux manipulations | Partie 4 |
 | Chaîne de responsabilité | La trace écrite de qui a touché la preuve, quand, et dans quel ordre | Partie 4 |
 
 ### Objectifs du chapitre
@@ -539,6 +541,7 @@ Le chapitre 2 applique le cadre. La capture qui suit ne couvre que les deux segm
 Le chapitre occupe deux créneaux séparés par la pause déjeuner : une heure de 11h00 à 12h00, puis trois heures de 13h00 à 16h00. C’est le plus long de la formation. Le matin, le travail porte sur le point d’observation et sur la lecture d’un en-tête de paquet ; l’après-midi, sur les techniques de capture puis sur le laboratoire qui produit la capture de référence et l’inventaire des hôtes. Après la pause, le contexte tient en une ligne : la capture qui suit se fait là où l’enquêteur est branché, c’est-à-dire sur le segment du site central 10.10.0.0/24, et toute acquisition qui sortirait de ce cadre serait inscrite au journal avec son motif.
 
 ### Préambule — produire une copie datée et fidèle du trafic
+
 Un enquêteur ne peut pas emporter le réseau : il n’en garde qu’une copie, prise à un instant précis, et cette copie se décide en trois choix — où se placer, quand commencer, combien conserver. Chacun peut faire perdre la preuve. Se placer du mauvais côté ne montre pas le dialogue entre deux machines, commencer trop tard perd l’ouverture d’une session, conserver trop de données ne laisse que le début de chaque message. Aucune de ces erreurs n’est visible au moment où on la commet : elles se découvrent le lendemain, quand la question à laquelle la capture devait répondre a changé de forme.
 
 Ce chapitre exécute le cadre écrit ce matin, commande par commande, et il ne parle encore ni d’incident, ni d’attaque, ni de responsable. Il produit la copie datée du trafic, puis dit précisément ce qu’elle contient et ce qu’elle ne contient pas. Au terme de l’après-midi, le dossier `~/enquete` contient la capture de référence, l’inventaire des hôtes, et les empreintes qui prouvent que ni l’un ni l’autre n’a bougé depuis sa création.

@@ -59,7 +59,8 @@ Les deux chapitres de la journée se relient sans rupture. Le chapitre 3 ne prod
 ## Chapitre 3 — M3 : Analyse des paquets et détection des anomalies (9h00–12h00)
 
 ### Préambule — relever ce qui déborde de l’ordinaire
-L’enquêteur observe un réseau qui n’a tenu aucun dossier. L’un de ses postes interroge des ports que personne ne lui a demandé d’interroger, engage une session en clair, lit un partage, puis envoie des paquets en rafale vers un serveur. Personne n’a rien vu, parce que personne ne savait à quoi ressemblait le fonctionnement normal. Le premier jour a produit la référence qui manquait : la capture de référence, obtenue sur demande et qui contient la mesure de débit vers le port 5201 du serveur applicatif, et l’inventaire des hôtes, qui dit les ports que chaque machine a acceptés de déclarer.
+
+L’enquêteur observe un réseau qui n’a tenu aucun dossier. L’un de ses postes essaie des portes de service que personne ne lui a demandé d’essayer, ouvre une session que rien ne chiffre, parcourt un partage de fichiers, puis envoie une rafale de petits messages vers un serveur. Personne n’a rien vu, parce que personne ne savait à quoi ressemblait le fonctionnement normal. Le premier jour a produit la référence qui manquait : la capture de référence, obtenue sur demande et qui contient la mesure de débit vers le port 5201 du serveur applicatif, et l’inventaire des hôtes, qui dit les ports que chaque machine a acceptés de déclarer.
 
 Reste la difficulté du métier : on ne peut pas attendre qu’un incident se produise sous ses yeux. L’enquêteur provoque donc lui-même chaque anomalie qu’il prétend reconnaître, depuis son propre poste, puis recommence, de sorte que la capture contienne exactement ce qu’il cherchait, avec une heure connue et une signature que tout autre enquêteur retrouvera le même jour. Entre cette reproduction et le trafic de l’incident, une seule différence compte : l’adresse qui l’émet. Le chapitre en tire le fichier `~/enquete/anomalies.md`, où cette différence est écrite en toutes lettres.
 
@@ -331,7 +332,7 @@ smbclient //10.10.0.30/partage -U 'enquete%lab-2026' -c 'ls'
 sudo ping -c 200 -i 0.05 10.10.0.20
 ```
 
-Quatre commandes, quatre familles, dans l’ordre du programme du module. Chacune se lit ainsi.
+Quatre commandes, quatre familles de trafic, dans l’ordre. Chacune se lit ainsi.
 
 La première produit le balayage de ports. L’option `-n` interdit la résolution des noms, l’option `-Pn` dispense de tester d’abord si la machine répond, et l’option `-sT` impose une connexion complète sur chaque port : c’est le balayage connecté, seule famille qui laisse dans la capture des segments d’ouverture, des accusés de serveur et des acquittements de client. Les deux options de temporisation limitent le temps d’attente, pour qu’aucune reprise ne vienne gonfler le compte. La liste de ports est celle de la partie 2.
 
@@ -759,6 +760,7 @@ Le fichier `anomalies.md` consigne qu’une session a été ouverte sur le port 
 ## Chapitre 4 — M4 : Utilisation des journaux et des outils d’analyse réseau (13h00–16h00)
 
 ### Préambule — lire les journaux et croiser les sources
+
 Au chapitre 3, l’enquêteur a regardé le trafic. Il a vu passer des demandes de connexion, une session en clair, un dialogue sur un partage, un flot de paquets. Sa capture lui dit ce qui a circulé, mais pas qui a décidé, ni ce que les machines ont pensé de ce qu’elles ont reçu. Or chacun de ces actes laisse une ligne datée quelque part : une machine qui refuse une connexion, un routeur qui change d’état, un serveur de fichiers qui accepte une session. L’ensemble de ces lignes complète la capture, il ne la remplace jamais.
 
 L’enjeu du chapitre est donc concret. L’enquêteur doit apprendre à lire trois sources qu’il n’a jamais ouvertes, en extraire l’essentiel sans noyer le dossier, écrire lui-même une règle de détection pour vérifier qu’il sait ce qu’une détection peut et ne peut pas voir, puis produire le fichier d’alertes `~/enquete/alertes-suricata.txt`, qui tiendra lieu de pièce au dossier du troisième jour.
@@ -877,7 +879,7 @@ L’autre point à comprendre est la répétition. Les alertes observées revien
 
 #### 4. Zeek et Splunk : deux outils absents, un repli exécutable (14min)
 
-Le programme du client nomme trois outils d’analyse : Zeek, Suricata et Splunk. Suricata est présent et vient d’être traité. Zeek et Splunk ne sont pas dans l’image du laboratoire, et ils ne peuvent pas être installés hors ligne, faute de dépôt accessible. Les deux sont donc traités en outils absents, ce qui n’empêche pas d’enseigner leur rôle, à condition d’être exact sur ce qu’ils apportent.
+Trois outils d’analyse sont attendus sur ce type de réseau : Zeek, Suricata et Splunk. Suricata est présent et vient d’être traité. Zeek et Splunk ne sont pas dans l’image du laboratoire, et ils ne peuvent pas être installés hors ligne, faute de dépôt accessible. Les deux sont donc traités en outils absents, ce qui n’empêche pas d’enseigner leur rôle, à condition d’être exact sur ce qu’ils apportent.
 
 Zeek est un analyseur de réseau qui produit des journaux structurés à partir du trafic observé : connexions, requêtes de noms de domaine, requêtes web, sessions chiffrées, transfert de fichiers. Là où un moteur de détection cherche des comportements écrits à l’avance, Zeek décrit ce qui s’est passé et laisse l’interprétation au lecteur. Il est utile quand on cherche une activité pour laquelle on n’a pas encore de règle.
 
@@ -885,7 +887,7 @@ Splunk est une plateforme de centralisation, d’indexation et de corrélation. 
 
 La méthode d’installation de chacun, sur un poste connecté, est simple et connue : ajouter le dépôt officiel de l’outil, installer le paquet, puis indiquer au collecteur de journaux du laboratoire d’en recevoir l’ensemble des journaux. Cette marche à suivre est donnée ici pour que l’enquêteur sache quoi faire sur un poste qui dispose d’un accès, mais elle n’est pas exécutable dans l’image.
 
-Le repli exécutable existe, et il est déjà en place : le journal au format JSON de Suricata, `~/suricata/eve.json`, qui contient les alertes mais aussi les flux, donc une part du travail que ferait Zeek. Il s’analyse en ligne de commande avec `jq`, qui est présent dans l’image. Tout ce que ce chapitre demande d’un analyseur de trafic — isoler des événements, les compter, les trier par instant, les recouper — se fait sur ce fichier. C’est cette substitution qui garantit qu’aucune étape du programme ne dépend d’un outil absent.
+Le repli exécutable existe, et il est déjà en place : le journal au format JSON de Suricata, `~/suricata/eve.json`, qui contient les alertes mais aussi les flux, donc une part du travail que ferait Zeek. Il s’analyse en ligne de commande avec `jq`, qui est présent dans l’image. Tout ce que ce chapitre demande d’un analyseur de trafic — isoler des événements, les compter, les trier par instant, les recouper — se fait sur ce fichier. C’est cette substitution qui garantit qu’aucune étape de ce chapitre ne dépend d’un outil absent.
 
 ### Les techniques, pas à pas
 
@@ -1064,7 +1066,7 @@ flowchart LR
 
 **Fig 4 — D’où viennent les journaux du LAB, et l’angle mort du moteur de détection sur la filiale.**
 
-Ce que le schéma ne montre pas : le volume d’alertes, qui dépend du nombre de tours écoulés et n’est jamais une valeur fixe. Il ne montre pas non plus de pare-feu : le laboratoire n’en comporte aucun. La famille des journaux de pare-feu, que le programme mentionne, est représentée ici par le collecteur, qui rassemble les messages des machines du site central.
+Ce que le schéma ne montre pas : le volume d’alertes, qui dépend du nombre de tours écoulés et n’est jamais une valeur fixe. Il ne montre pas non plus de pare-feu : le laboratoire n’en comporte aucun. La famille des journaux de pare-feu est représentée ici par le collecteur, qui rassemble les messages des machines du site central.
 
 #### Étapes du LAB
 
