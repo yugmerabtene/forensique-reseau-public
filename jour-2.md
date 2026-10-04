@@ -15,6 +15,16 @@ Le LAB et ses exercices produisent enfin un livrable nommé, que le chapitre sui
 Cette journée comporte deux chapitres de trois heures, l’un le matin et l’autre l’après-midi. La pause déjeuner de 12h00 à 13h00 les sépare.
 Les deux chapitres forment une chaîne : le premier lit les preuves produites la veille et en extrait un fichier d’anomalies, le second rapproche ce fichier des journaux que le collecteur reçoit sur le port 514.
 
+### Avant la séance — montage du laboratoire
+
+Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00 :
+
+```bash
+.opencode/lab/construire-lab.sh monter
+```
+
+Cette commande recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
+
 ## Objectifs du Jour
 
 À l’issue de cette journée, chaque participant est capable de :
@@ -407,15 +417,23 @@ Un écart entre l’inventaire et la capture est un constat d’enquête, pas un
 
 #### Prérequis
 
-**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `.opencode/lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
+
+Pour prouver que le laboratoire est prêt avant de commencer :
 
 ```bash
-.opencode/lab/construire-lab.sh monter
 .opencode/lab/construire-lab.sh verifier
+```
+
+Cette commande contrôle la topologie, les journaux et les droits d’écriture ; elle doit se terminer par « Laboratoire conforme aux attentes des trois journées ». Le LAB ne commence pas avant.
+
+Pour travailler, le formateur ouvre le poste de l’enquêteur, et toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre :
+
+```bash
 docker exec -it -w /home/enqueteur/enquete flab-enquete bash
 ```
 
-La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+Cette commande ouvre le poste de l’enquêteur. Le répertoire de travail est `/home/enqueteur/enquete`, c’est-à-dire `~/enquete` pour le compte ordinaire `enqueteur`.
 
 Ce LAB ne se lance pas tout seul. Il consomme trois fichiers produits le premier jour, et il est important de comprendre pourquoi il en a besoin : ces trois fichiers ne sont pas des données de confort, ce sont les trois sources de vérité du laboratoire. La capture de référence donne la mesure ordinaire, l’inventaire donne la déclaration de service, le cadre d’enquête donne le périmètre.
 
@@ -1002,17 +1020,25 @@ Ce qu’elle ne prouve pas : que la règle se déclencherait sur un trafic réel
 - L’inventaire de la veille est disponible : `~/enquete/inventaire-hotes.txt`.
 - Les outils `jq`, `grep`, `awk`, `suricata` et `sha256sum` sont présents sur le poste. Aucun droit particulier n’est nécessaire : le compte `enqueteur` suffit.
 
-**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `.opencode/lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
+
+Pour prouver que le laboratoire est prêt avant de commencer :
 
 ```bash
-.opencode/lab/construire-lab.sh monter
 .opencode/lab/construire-lab.sh verifier
+```
+
+Cette commande contrôle la topologie, les journaux et les droits d’écriture ; elle doit se terminer par « Laboratoire conforme aux attentes des trois journées ». Le LAB ne commence pas avant.
+
+Pour travailler, le formateur ouvre le poste de l’enquêteur, et toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre :
+
+```bash
 docker exec -it -w /home/enqueteur/enquete flab-enquete bash
 ```
 
-La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+Cette commande ouvre le poste de l’enquêteur. Le répertoire de travail est `/home/enqueteur/enquete`, c’est-à-dire `~/enquete` pour le compte ordinaire `enqueteur`.
 
-Si l’un des trois journaux est absent, le laboratoire n’a pas été monté dans son état normal : la journée s’interrompt et le formateur remet le laboratoire en place. Un enquêteur ne travaille pas sur des journaux manquants, il constate leur absence et la consigne.
+Si l’un des trois journaux est absent, le laboratoire n’a pas été monté dans son état normal : la journée s’interrompt, le formateur applique le rétablissement non destructif décrit dans ces prérequis, et le journal manquant est constaté et consigné. Un enquêteur ne travaille pas sur des journaux manquants, il constate leur absence et la consigne.
 
 #### Environnement
 
@@ -1036,26 +1062,25 @@ Le schéma Fig 4 ci-dessous se lit de gauche à droite : les sources de gauche a
 
 ```mermaid
 flowchart LR
-  PF["Le pare-feu"]
-  RT["Le routeur"]
-  SRV["Les serveurs"]
-  FIC["Le serveur de fichiers 10.10.0.30"]
-  COL["Le collecteur de journaux 10.10.0.50"]
-  MOTEUR["Le moteur de détection"]
-  PF --> COL
-  RT --> COL
-  SRV --> COL
-  FIC --> COL
-  COL --> F1["~/journal/journal-reseau.log,<br/>en lecture seule"]
-  COL --> F2["~/journal/journal-samba.log,<br/>en lecture seule"]
-  MOTEUR --> F3["~/suricata/eve.json, en lecture seule"]
+  PASS["La passerelle 10.10.0.1,<br/>famille des routeurs"]
+  APP["Le serveur applicatif 10.10.0.20"]
+  CPN["Le poste compromis<br/>10.20.0.10"]
+  COL["Le collecteur de journaux,<br/>10.10.0.50"]
+  SONDE["La sonde de détection,<br/>c’est elle qui exécute<br/>Suricata"]
+  FILS["Le serveur de fichiers 10.10.0.30,<br/>famille des serveurs"]
+  PASS --> COL
+  APP --> COL
+  CPN --> COL
+  COL --> F1["~/journal/journal-reseau.log,<br/>écrit par le collecteur,<br/>en lecture seule"]
+  FILS --> F2["~/journal/journal-samba.log,<br/>écrit par le serveur<br/>de fichiers,<br/>en lecture seule"]
+  SONDE --> F3["~/suricata/eve.json,<br/>en lecture seule"]
   FIL["Filiale 10.20.0.0/24,<br/>le trafic ne traverse pas<br/>l’interface centrale,<br/>il n’entre donc dans aucun<br/>de ces trois fichiers"]
-  FIL -.->|"angle mort"| MOTEUR
+  FIL -.->|"angle mort"| SONDE
 ```
 
 **Fig 4 — D’où viennent les journaux du LAB, et l’angle mort du moteur de détection sur la filiale.**
 
-Ce que le schéma ne montre pas : le volume d’alertes, qui dépend du nombre de tours écoulés et n’est jamais une valeur fixe.
+Ce que le schéma ne montre pas : le volume d’alertes, qui dépend du nombre de tours écoulés et n’est jamais une valeur fixe. Il ne montre pas non plus de pare-feu : le laboratoire n’en comporte aucun. La famille des journaux de pare-feu, que le programme mentionne, est représentée ici par le collecteur, qui rassemble les messages des machines du site central.
 
 #### Étapes du LAB
 

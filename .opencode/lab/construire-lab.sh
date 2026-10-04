@@ -62,6 +62,7 @@
 #   ./construire-lab.sh monter     crée les réseaux et démarre les conteneurs
 #   ./construire-lab.sh verifier   vérifie la topologie et les journaux
 #   ./construire-lab.sh scenario   relance le scénario d'incident
+#   ./construire-lab.sh relancer   rétablit les services sans toucher au volume
 #   ./construire-lab.sh arrêter    supprime tout
 #   ./construire-lab.sh enquete <commande>  exécute une commande dans le poste
 set -euo pipefail
@@ -178,6 +179,30 @@ demarrer_rsyslog_hote() {
   docker exec -d -u root "$hote" rsyslogd -n -i NONE -f /etc/rsyslab.conf
 }
 
+# Appliquer la configuration réseau du poste de l'enquêteur.
+#
+# Les interfaces portent les masques réels des deux segments, et chaque segment a
+# sa propre route. Aucun trafic ne traverse la passerelle : Docker isole le
+# passage d'un pont à l'autre, et aucun LAB ne repose sur ce relais.
+#
+# Cette configuration est reprise par « relancer », et elle doit l'être : un
+# conteneur arrêté puis redémarré reçoit de nouveau ses interfaces de Docker,
+# donc les masques larges du pont et la passerelle technique hors segment, et non
+# les masques et la route que le laboratoire annonce. Docker ne restitue pas les
+# routes ajoutées à la main. Sans ce rappel, la table de voisinage se remplit
+# d'échecs illisibles et la route par défaut affichée n'est plus celle du
+# laboratoire.
+configurer_enquete() {
+  docker exec -u root "$PREFIXE-enquete" sh -c '
+    ip addr flush dev eth0
+    ip addr add 10.10.0.10/24 dev eth0
+    ip addr flush dev eth1
+    ip addr add 10.20.0.30/24 dev eth1
+    ip route replace default via 10.10.0.1 dev eth0
+    ip route replace 10.20.0.0/24 dev eth1 src 10.20.0.30
+  '
+}
+
 # ------------------------------------------------------------------- monter
 monter() {
   log "Arrêt d'une éventuelle précédente exécution"
@@ -237,14 +262,7 @@ monter() {
   # segments, et chaque segment a sa propre route. Aucun trafic ne traverse la
   # passerelle : Docker isole le passage d'un pont à l'autre, et aucun LAB ne
   # repose sur ce relais.
-  docker exec -u root "$PREFIXE-enquete" sh -c '
-    ip addr flush dev eth0
-    ip addr add 10.10.0.10/24 dev eth0
-    ip addr flush dev eth1
-    ip addr add 10.20.0.30/24 dev eth1
-    ip route replace default via 10.10.0.1 dev eth0
-    ip route replace 10.20.0.0/24 dev eth1 src 10.20.0.30
-  '
+  configurer_enquete
   ok "lab-enquete : 10.10.0.0/24 et 10.20.0.0/24, une route par segment"
 
   docker run -d --name "$PREFIXE-app" --hostname lab-app \
@@ -338,9 +356,15 @@ monter() {
 
 # Les services sont démarrés un par un, et seulement ceux dont le port est
 # annoncé dans le tableau d'environnement du support. Aucun port n'est ouvert
-# « pour completeness » : un port ouvert que le support ne mentionne pas devient
+# « pour complétude » : un port ouvert que le support ne mentionne pas devient
 # une anomalie que l'apprenant doit expliquer, et le support perd sa cohérence.
+#
+# Le seul rôle de cet argument est le journal d'accès du partage. « reinitialiser »,
+# le comportement par défaut, le vide avant le démarrage du serveur de fichiers, et
+# « conserver » le laisse intact : c'est le mode qu'emploie « relancer », qui ne
+# doit pas toucher aux journaux déjà produits.
 demarrer_services() {
+  local journal_partage=${1:-reinitialiser}
   # HTTP sur le port 80. busybox httpd est présent dans l'image et ne demande
   # aucune dépendance supplémentaire.
   for hote in "$PREFIXE-app" "$PREFIXE-filiale"; do
@@ -391,7 +415,12 @@ demarrer_services() {
     # ferait dépendre la lisibilité par l enquêteur d une valeur par défaut que
     # rien dans le laboratoire ne contrôle. Le compte enqueteur n est pas root :
     # il ne peut ni écrire dans ce fichier, ni le déplacer, ni le supprimer.
-    : > /partage/journal/journal-samba.log
+    # Le contenu n est vidé que pour un montage, donc au début d une journée de
+    # formation. Une réparation conserve ce qui a déjà été journalisé, et le mode
+    # est posé dans les deux cas pour que l enquêteur puisse toujours le lire.
+    if [ "$1" = "reinitialiser" ]; then
+      : > /partage/journal/journal-samba.log
+    fi
     chmod 0644 /partage/journal/journal-samba.log
     cat > /etc/samba/smb.conf.lab <<CONF
 [global]
@@ -436,7 +465,7 @@ CONF
     printf "lab-2026\nlab-2026\n" | pdbedit -a -u enquete -t >/dev/null
     pdbedit -L | grep -q "^enquete:"
     smbd -D --configfile=/etc/samba/smb.conf --no-process-group
-  ' >/dev/null
+  ' _ "$journal_partage" >/dev/null
   ok "SMB sur le port 445 de lab-fichiers, journal dans le volume partagé"
 
   # Le port 23 en clair du serveur de fichiers. Le démon Telnet d'Ubuntu ne
@@ -624,7 +653,8 @@ attendre() {
 # vérification démarrerait avant que les services n'aient démarré et conclurait à
 # tort que le laboratoire est absent.
 attendre_services() {
-  local fin=$(( SECONDS + 120 ))
+  local limite=${1:-120}
+  local fin=$(( SECONDS + limite ))
   local cibles="10.10.0.20:22 10.10.0.20:80 10.10.0.20:443 10.10.0.30:23 10.10.0.30:445 10.20.0.20:22 10.20.0.20:80"
   while [ $SECONDS -lt $fin ]; do
     local manques=0
@@ -641,7 +671,7 @@ attendre_services() {
     fi
     sleep 3
   done
-  err "des services ne répondent pas après 120 secondes"
+  err "des services ne répondent pas après $limite secondes"
   return 1
 }
 
@@ -957,6 +987,248 @@ scenario() {
   ok "scénario d'incident relancé"
 }
 
+# ----------------------------------------------------------------- relancer
+# Réparer un laboratoire déjà monté, sans détruire les livrables.
+#
+# Les services des machines du laboratoire sont des processus enfants lancés par
+# « docker exec -d » depuis demarrer_services. Un conteneur arrêté puis redémarré
+# les perd tous, et « docker start » seul ne les relance pas : il ne rend que le
+# conteneur lui-même. La seule commande qui les rétablissait jusqu'ici est
+# « monter », qui supprime le volume du poste de l'enquêteur et efface donc les
+# livrables et les empreintes des trois journées. En séance, une panne de service
+# sans remède non destructif n'est pas acceptable : cette sous-commande est ce
+# remède.
+#
+# Ce qui n'est jamais fait, et qui doit rester vrai après chaque exécution :
+#   - le volume flab-enquete n'est ni supprimé, ni recréé, ni vidé ;
+#   - le répertoire ~/enquete n'est ni vidé, ni recréé ;
+#   - les répertoires ~/journal et ~/suricata ne perdent aucun de leurs fichiers,
+#     et le journal d'accès du partage n'est pas vidé : « demarrer_services » est
+#     appelée dans le mode « conserver », qui laisse le fichier intact.
+#
+# demarrer_services n'est appelée que lorsqu'un service manque, et après que
+# arreter_services a arrêté ceux qui tournaient déjà. C'est une condition
+# mesurée, et elle n'est pas facultative : rappelée sur un laboratoire sain, elle
+# ajoute un second rsyslogd sur chaque hôte, un second moteur de détection dans
+# la sonde et une seconde invite Telnet sur le serveur de fichiers. Le second
+# rsyslogd relaie une seconde fois le journal du partage, et le journal rassemblé
+# se met alors à contenir des lignes en double. Un remède qui dégrade la preuve
+# n'est pas un remède.
+
+# Arrêter les services du laboratoire, et eux seuls.
+#
+# Chaque service est arrêté par le nom de processus sous lequel demarrer_services
+# l'a lancé, hôte par hôte. Le poste de l'enquêteur n'est jamais touché : il ne
+# porte aucun service. Le scénario d'incident n'est jamais arrêté non plus : il
+# ne fait pas partie de cette liste, il fait partie de la preuve, et le laisser
+# tourner conserve la phase en cours de la boucle.
+#
+# L'arrêt se fait en deux temps : un signal terminateur d'abord, pour que le
+# service ait le temps de fermer proprement ses fichiers, puis un signal qui ne
+# peut pas être refusé pour ce qui refuserait de s'arrêter. Un service bloqué qui
+# garderait son port empêcherait le rétablissement, et la commande n'aurait plus
+# de remède à proposer en séance.
+#
+# Un service arrêté peut rester affiché dans la liste des processus avec la
+# mention « defunct » : le premier processus du conteneur ne ramasse pas ses
+# enfants, et il s'agit d'un processus arrêté, qui ne tient aucun port.
+arreter_services() {
+  local hote motifs signal tour
+
+  # L'invite de connexion en clair tient le port 23 par une boucle qui en rouvre
+  # l'écoute après chaque client. La boucle est arrêtée avant l'écoute elle-même,
+  # faute de quoi elle en rouvrirait une à l'instant où le service repart, et le
+  # port resterait tenu par l'ancienne. Le motif « while true » ne désigne que
+  # cette boucle dans ce conteneur.
+  docker exec "$PREFIXE-fichiers" pkill -f 'while true' 2>/dev/null || true
+
+  for tour in 1 2; do
+    if [ "$tour" -eq 1 ]; then signal=-15; else signal=-9; fi
+    for hote in "$PREFIXE-app" "$PREFIXE-filiale" "$PREFIXE-fichiers" \
+                "$PREFIXE-sonde" "$PREFIXE-passerelle" "$PREFIXE-compromis" \
+                "$PREFIXE-collecteur"; do
+      case "$hote" in
+        "$PREFIXE-app")      motifs="busybox sshd iperf3 openssl rsyslogd" ;;
+        "$PREFIXE-filiale")  motifs="busybox sshd rsyslogd" ;;
+        "$PREFIXE-fichiers") motifs="busybox timeout smbd smbd-notifyd smbd-cleanupd rsyslogd" ;;
+        "$PREFIXE-sonde")    motifs="Suricata-Main" ;;
+        *)                   motifs="rsyslogd" ;;
+      esac
+      for motif in $motifs; do
+        docker exec "$hote" pkill "$signal" -x "$motif" 2>/dev/null || true
+      done
+    done
+    sleep 1
+  done
+
+  ok "services du laboratoire arrêtés"
+}
+
+# Dire si l'adressage du poste de l'enquêteur est celui du laboratoire.
+#
+# Les deux critères sont ceux que le support présente à l'apprenant : une route
+# par segment, et une route par défaut vers la passerelle du site central. Ni
+# l'un ni l'autre n'est rendu par Docker après un redémarrage du conteneur.
+route_enquete_conforme() {
+  docker exec "$PREFIXE-enquete" sh -c \
+    'ip route show default | grep -q "via 10.10.0.1 dev eth0"' 2>/dev/null
+}
+
+# Constater ce qui manque, sans rien réparer.
+#
+# Renvoie 0 lorsque le laboratoire est complet, et 1 dès qu'un service annoncé
+# par le support ne répond pas ou ne tourne pas. Les ports sont interrogés avec
+# la même attente et les mêmes reprises que le montage, ce qui évite de conclure
+# à une panne sur le port 23 alors que le scénario y tient une session.
+services_manquants() {
+  local hote manques=0
+
+  if ! attendre_services 20 >/dev/null 2>&1; then
+    err "au moins un service annoncé par le support ne répond pas"
+    manques=$((manques+1))
+  fi
+
+  # La collecte, sur chacun des hôtes qui journalisent. Le relayage se joue
+  # autant sur ces hôtes que sur le collecteur : un seul d'entre eux muet suffit
+  # à priver le chapitre consacré aux journaux de sa matière.
+  for hote in "$PREFIXE-app" "$PREFIXE-passerelle" "$PREFIXE-filiale" \
+              "$PREFIXE-fichiers" "$PREFIXE-compromis" "$PREFIXE-collecteur"; do
+    if ! docker exec "$hote" pgrep -x rsyslogd >/dev/null 2>&1; then
+      err "la collecte de journaux ne tourne pas sur ${hote#"$PREFIXE"-}"
+      manques=$((manques+1))
+    fi
+  done
+
+  # Le service de débit, que le chapitre sur la collecte utilise pour produire un
+  # trafic connu. Il ne figure pas parmi les sept ports vérifiés ci-dessus, qui
+  # testent l'accessibilité des hôtes et non les outils du laboratoire.
+  if ! docker exec "$PREFIXE-app" pgrep -x iperf3 >/dev/null 2>&1; then
+    err "le service de débit ne tourne pas sur le serveur applicatif"
+    manques=$((manques+1))
+  fi
+
+  # Le moteur de détection, puis le scénario d'incident.
+  if ! docker exec "$PREFIXE-sonde" pgrep -x Suricata-Main >/dev/null 2>&1; then
+    err "le moteur de détection ne tourne pas dans la sonde"
+    manques=$((manques+1))
+  fi
+  if ! docker exec "$PREFIXE-compromis" pgrep -f scenario-incident >/dev/null 2>&1; then
+    err "le scénario d'incident ne tourne pas sur le poste compromis"
+    manques=$((manques+1))
+  fi
+
+  return "$manques"
+}
+
+relancer() {
+  log "Vérification de la présence des conteneurs du laboratoire"
+  local nom hote absents=0 redemarres=0 repares=0
+  for nom in $APPS; do
+    if ! docker inspect "$PREFIXE-$nom" >/dev/null 2>&1; then
+      err "$PREFIXE-$nom n'existe pas"
+      absents=$((absents+1))
+    fi
+  done
+  if [ "$absents" -gt 0 ]; then
+    err "le laboratoire n'est pas monté : « relancer » n'a rien à réparer"
+    err "exécutez d'abord « monter », qui est la seule commande qui le crée"
+    return 1
+  fi
+  ok "les huit conteneurs du laboratoire sont présents"
+
+  # Seuls les conteneurs arrêtés sont redémarrés. Un conteneur déjà actif n'est
+  # pas touché : son redémarrage tuerait ses services pour rien, et les
+  # conteneurs du laboratoire portent tous leurs services en processus enfants.
+  for nom in $APPS; do
+    hote="$PREFIXE-$nom"
+    if [ "$(docker inspect -f '{{.State.Running}}' "$hote")" = "true" ]; then
+      continue
+    fi
+    docker start "$hote" >/dev/null
+    ok "$hote redémarré"
+    redemarres=$((redemarres+1))
+    # Le poste de l'enquêteur est le seul conteneur dont la configuration réseau
+    # n'est pas rendue par Docker : un redémarrage lui rend les masques larges du
+    # pont et la passerelle technique, et lui perd les routes du laboratoire. Sa
+    # configuration est contrôlée juste après, pour tous les conteneurs et quelle
+    # que soit l'origine du redémarrage.
+  done
+  if [ "$redemarres" -eq 0 ]; then
+    ok "les huit conteneurs tournaient déjà : aucun n'a été redémarré"
+  fi
+
+  # L'adressage du poste de l'enquêteur se contrôle et se corrige à part. C'est
+  # mesuré : après un « docker start », Docker lui rend ses interfaces en 10.10.0.10/23
+  # et 10.20.0.30/23, et sa route par défaut vers 10.10.1.253, la passerelle
+  # technique du pont. Aucun service n'est arrêté pour cette correction, et rien
+  # n'est fait lorsque la configuration est déjà celle du laboratoire.
+  if ! route_enquete_conforme; then
+    log "Rétablissement de la configuration réseau du poste de l'enquêteur"
+    configurer_enquete
+    ok "10.10.0.10/24 et 10.20.0.30/24 rétablis, une route par segment"
+  fi
+
+  # Le répertoire des journaux du volume partagé n'est préparé que s'il a
+  # disparu, car demarrer_services en a besoin pour écrire le journal du
+  # partage. Cette préparation ne supprime rien : elle crée le répertoire absent
+  # et en rétablit le mode et le propriétaire.
+  for hote in "$PREFIXE-fichiers" "$PREFIXE-collecteur"; do
+    if ! docker exec -u root "$hote" test -d /partage/journal 2>/dev/null; then
+      preparer_journal_partage "$hote"
+      ok "répertoire ~/journal rétabli dans le volume partagé"
+    fi
+  done
+
+  # Un laboratoire complet n'est pas touché. C'est le cas le plus fréquent, celui
+  # d'un formateur qui vérifie son laboratoire avant la séance : il doit pouvoir
+  # le faire sans interrompre un service, sans dupliquer un journal et sans
+  # toucher au volume.
+  log "Vérification des services annoncés dans le support"
+  if ! services_manquants; then
+    log "Arrêt des services en cours, avant leur rétablissement"
+    arreter_services
+
+    log "Rétablissement des services annoncés dans le support"
+    demarrer_services conserver
+
+    # Le scénario d'incident est lui aussi un processus enfant, et il est perdu si
+    # le poste compromis a été arrêté. Il n'est relancé que s'il ne tourne plus :
+    # le laisser en place conserve la phase en cours de la boucle, ses journaux
+    # et le fil de ses alertes.
+    if ! docker exec "$PREFIXE-compromis" pgrep -f scenario-incident >/dev/null 2>&1; then
+      scenario
+    else
+      ok "scénario d'incident toujours en cours : il n'a pas été relancé"
+    fi
+
+    log "Attente de la disponibilité des services"
+    attendre 30
+
+    # La réparation est contrôlée, et non supposée : le même constat que celui qui
+    # a décidé de réparer est refait ici. Un laboratoire que la réparation n'a pas
+    # rétabli doit le dire, et non se déclarer réparé.
+    log "Contrôle des services après réparation"
+    if ! services_manquants; then
+      err "la réparation n'a pas rétabli tous les services du laboratoire"
+      return 1
+    fi
+    repares=1
+  fi
+
+  # Le compte rendu dit ce que la commande a réellement fait, et non ce qu'elle
+  # fait d'ordinaire : un laboratoire déjà sain n'a vu ni service interrompu, ni
+  # journal rouvert, et l'annoncer serait faux.
+  log "Réparation terminée"
+  ok "conteneurs redémarrés : $redemarres sur 8"
+  if [ "$repares" -eq 1 ]; then
+    ok "services absents rétablis, un seul exemplaire de chacun"
+    ok "les journaux déjà écrits ont été conservés : aucun n'a été vidé"
+  else
+    ok "aucun service n'était arrêté : aucun n'a été interrompu"
+  fi
+  ok "le volume flab-enquete est conservé : aucun livrable de ~/enquete n'a été effacé"
+}
+
 # ------------------------------------------------------------------ arrêter
 arrêter() {
   for hote in $APPS; do
@@ -971,11 +1243,36 @@ enquete() {
   docker exec -w /home/enqueteur/enquete "$PREFIXE-enquete" "$@"
 }
 
-case "${1:-monter}" in
+# Aucun sous-commande ne vaut « monter » par défaut : « monter » détruit le
+# volume du poste de l'enquêteur, donc les livrables et les empreintes déjà
+# produits. Exiger une action explicite évite qu'une simple faute de frappe
+# ou un appel sans argument détruise le travail de la journée.
+#
+# « relancer » est le remède non destructif : il rétablit les services d'un
+# laboratoire déjà monté sans toucher au volume, donc sans effacer les livrables.
+if [ $# -eq 0 ]; then
+  echo "Usage : $0 {monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2
+  echo "Attention : « monter » recrée le volume du poste de l'enquêteur et" >&2
+  echo "efface les livrables. Ne l'employez qu'avant le début de la séance." >&2
+  echo "Pour réparer le laboratoire sans les effacer, employez « relancer »." >&2
+  exit 2
+fi
+
+# « enquete » sans commande n'a rien à exécuter : « docker exec » exige au moins
+# deux arguments et renverrait son propre message d'erreur, qui masque le
+# contrat d'usage du script. Le refus est donc explicite, comme pour un
+# sous-commande inconnu.
+if [ $# -eq 1 ] && [ "$1" = "enquete" ]; then
+  echo "Usage : $0 enquete <commande>" >&2
+  exit 2
+fi
+
+case "$1" in
   monter)    monter ;;
   verifier)  verifier ;;
   scenario)  scenario ;;
+  relancer)  relancer ;;
   arrêter)   arrêter ;;
   enquete)   shift; enquete "$@" ;;
-  *)         echo "Usage : $0 {monter|verifier|scenario|arrêter|enquete <commande>}" >&2; exit 2 ;;
+  *)         echo "Usage : $0 {monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2; exit 2 ;;
 esac

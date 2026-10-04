@@ -15,6 +15,16 @@ Le LAB et ses exercices produisent enfin un livrable nommé, que le chapitre sui
 Cette journée comporte deux chapitres de trois heures, l’un le matin et l’autre l’après-midi ; la pause déjeuner de 12h00 à 13h00 les sépare.
 Les deux chapitres forment une chaîne : le premier transforme les anomalies et les alertes produites la veille en une chronologie datée, le second transforme cette chronologie en un rapport d’enquête.
 
+### Avant la séance — montage du laboratoire
+
+Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00 :
+
+```bash
+.opencode/lab/construire-lab.sh monter
+```
+
+Cette commande recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
+
 ## Objectifs du Jour
 
 À l’issue de cette journée, chaque participant est capable de :
@@ -422,15 +432,23 @@ Ce que la sortie prouve : que les deux sources placent le même événement dans
 
 #### Prérequis
 
-**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `.opencode/lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
+
+Pour prouver que le laboratoire est prêt avant de commencer :
 
 ```bash
-.opencode/lab/construire-lab.sh monter
 .opencode/lab/construire-lab.sh verifier
+```
+
+Cette commande contrôle la topologie, les journaux et les droits d’écriture ; elle doit se terminer par « Laboratoire conforme aux attentes des trois journées ». Le LAB ne commence pas avant.
+
+Pour travailler, le formateur ouvre le poste de l’enquêteur, et toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre :
+
+```bash
 docker exec -it -w /home/enqueteur/enquete flab-enquete bash
 ```
 
-La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+Cette commande ouvre le poste de l’enquêteur. Le répertoire de travail est `/home/enqueteur/enquete`, c’est-à-dire `~/enquete` pour le compte ordinaire `enqueteur`.
 
 Ce LAB est le point de convergence des deux premiers jours. Il ne peut pas commencer tant que les deux livrables de la veille ne sont pas disponibles et intacts : `~/enquete/anomalies.md`, qui porte les quatre anomalies et leurs filtres, et `~/enquete/alertes-suricata.txt`, qui porte la répartition des alertes par règle, leur croisement avec les adresses d’origine et l’angle mort du détecteur sur la filiale. Le fichier `~/enquete/journal-acquisition.txt`, créé le premier jour, doit contenir au moins une ligne.
 
@@ -440,7 +458,7 @@ sha256sum -c ~/enquete/alertes-suricata.txt.sha256
 ls -l ~/enquete/
 ```
 
-Si l’une des deux empreintes ne se vérifie plus, le LAB s’arrête : une chronologie bâtie sur une pièce réécrite n’a aucune valeur, et l’écart doit être constaté et consigné avant toute autre chose. Si une pièce manque, le laboratoire n’a pas été monté dans son état normal et le formateur remet le laboratoire en place.
+Si l’une des deux empreintes ne se vérifie plus, le LAB s’arrête : une chronologie bâtie sur une pièce réécrite n’a aucune valeur, et l’écart doit être constaté et consigné avant toute autre chose. Si une pièce manque, le laboratoire n’a pas été monté dans son état normal : le formateur applique le rétablissement non destructif décrit dans ces prérequis, puis il constate et consigne la pièce absente.
 
 #### Environnement
 
@@ -930,15 +948,23 @@ done
 - Les livrables des jours précédents sont présents et intègres : `~/enquete/cadre-enquete.md`, `~/enquete/capture-reference.pcap`, `~/enquete/inventaire-hotes.txt`, `~/enquete/anomalies.md`, `~/enquete/anomalies.pcap`, `~/enquete/alertes-suricata.txt`, `~/enquete/regle-essai.rules`.
 - Le dossier `~/enquete/` est accessible en écriture pour l’utilisateur `enqueteur`.
 
-**Démarrer le laboratoire.** Le laboratoire est un ensemble de conteneurs Docker, montés par le formateur une seule fois pour la durée de la séance. Les commandes qui suivent se lancent sur la machine qui héberge le laboratoire ; la première ne se lance que si les conteneurs sont arrêtés, car elle les démarre.
+**Démarrer le laboratoire.** Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois avant le début de la séance, depuis la racine du projet ; la commande de montage figure dans l’encadré « Avant la séance » de cette journée. Le montage ne doit plus être exécuté ensuite : il recrée le volume du poste de l’enquêteur, il efface donc les livrables déjà produits et les empreintes qui les scellent, et en forensique une preuve qui disparaît ne se récupère pas. Si un conteneur s’est arrêté en cours de séance, on le relance sans rien détruire : `.opencode/lab/construire-lab.sh relancer`, puis on reprend la vérification ci-dessous.
+
+Pour prouver que le laboratoire est prêt avant de commencer :
 
 ```bash
-.opencode/lab/construire-lab.sh monter
 .opencode/lab/construire-lab.sh verifier
+```
+
+Cette commande contrôle la topologie, les journaux et les droits d’écriture ; elle doit se terminer par « Laboratoire conforme aux attentes des trois journées ». Le LAB ne commence pas avant.
+
+Pour travailler, le formateur ouvre le poste de l’enquêteur, et toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre :
+
+```bash
 docker exec -it -w /home/enqueteur/enquete flab-enquete bash
 ```
 
-La commande `verifier` contrôle la topologie et les journaux : elle doit se terminer par « Laboratoire conforme aux attentes des trois journées », et le LAB ne commence pas avant. La troisième commande ouvre le poste de l’enquêteur ; toutes les commandes du LAB se tapent dans le terminal qu’elle ouvre.
+Cette commande ouvre le poste de l’enquêteur. Le répertoire de travail est `/home/enqueteur/enquete`, c’est-à-dire `~/enquete` pour le compte ordinaire `enqueteur`.
 
 #### Environnement
 
