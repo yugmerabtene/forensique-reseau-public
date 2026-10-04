@@ -423,8 +423,16 @@ for support in "${SUPPORTS[@]}"; do
     parametres="$SORTIE/$nom-parametres.tex"
     ecrire_parametres "$CHEMIN" "$parametres"
 
+    # Les schemas Mermaid sont rendus en PDF vectoriel avant la conversion.
+    # Pandoc ne sait pas les interpreter : sans cette etape, il recopierait le
+    # code source du schema dans le document, et LaTeX detruirait les fleches.
+    info "schemas  $support"
+    support_avec_schemas="$(python3 "$RACINE/.opencode/scripts/rendre-schema.py" \
+        "$CHEMIN" "$SORTIE/schemas/$nom")" \
+        || erreur "les schemas de $support n'ont pas pu etre rendus"
+
     info "pandoc  $support -> $nom.tex"
-    pandoc "$CHEMIN" \
+    pandoc "$support_avec_schemas" \
         --from=markdown+pipe_tables+implicit_figures+raw_html+autolink_bare_uris \
         --to=latex \
         --standalone \
