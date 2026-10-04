@@ -58,19 +58,10 @@ Les deux chapitres de la journée se relient sans rupture. Le chapitre 3 ne prod
 
 ## Chapitre 3 — M3 : Analyse des paquets et détection des anomalies (9h00–12h00)
 
-Ce chapitre couvre le module 3 du programme imposé par le client. Le module se présente dans cet ordre : le flux légitime confronté à l’anomalie, puis le balayage de ports, l’attaque par déni de service et l’intrusion. Le chapitre suit exactement cet ordre. La première partie construit la ligne de base, les parties 2 et 3 traitent le balayage et le déni de service, la quatrième traite les intrusions.
+### Préambule — relever ce qui déborde de l’ordinaire
+L’enquêteur observe un réseau qui n’a tenu aucun dossier. L’un de ses postes interroge des ports que personne ne lui a demandé d’interroger, engage une session en clair, lit un partage, puis envoie des paquets en rafale vers un serveur. Personne n’a rien vu, parce que personne ne savait à quoi ressemblait le fonctionnement normal. Le premier jour a produit la référence qui manquait : la capture de référence, obtenue sur demande et qui contient la mesure de débit vers le port 5201 du serveur applicatif, et l’inventaire des hôtes, qui dit les ports que chaque machine a acceptés de déclarer.
 
-### Préambule — reconnaître un intrus dans le bruit d’un réseau
-
-Un médecin de garde reçoit un appel à trois heures du matin : un patient a de la fièvre. Il ne se lève pas pour annoncer une fièvre. Il mesure d’abord la température ordinaire du patient, il la compare à ce qu’il trouve, et il vérifie que l’écart ne vient pas du thermomètre. Sans cette première mesure, le mot fièvre ne veut rien dire : sur un patient qui court, la température de trente-huit degrés est normale.
-
-Un réseau fonctionne de la même manière. Le laboratoire ressemble à un service hospitalier qui n’a tenu aucun dossier. L’un de ses postes se met, à intervalles réguliers, à faire des choses qu’il ne faisait pas la veille : il interroge des ports que personne ne lui a demandé d’interroger, il engage une conversation avec un serveur distant en tapant ses identifiants sans aucune protection, il lit un partage, il envoie de petits paquets en rafale vers un serveur qui n’a rien demandé. Personne n’a rien vu, parce que personne ne savait à quoi ressemblait le fonctionnement normal de ces machines.
-
-Le premier jour a produit ce dossier. La capture de référence montre le trafic obtenu à la demande, la mesure de débit vers le port 5201 du serveur applicatif ; l’inventaire montre les ports que chaque machine a acceptés de déclarer. Ces deux documents ne sont pas une distraction : ce sont les constantes du problème. Sans eux, la capture de ce matin serait une suite de paquets sans signification, comme une photo d’une chambre prise dans le noir.
-
-Reste une difficulté, et elle est la plus importante du métier. L’enquêteur ne peut pas attendre, matin après matin, qu’un incident se produise sous ses yeux. Il provoque donc lui-même, depuis son propre poste, chacune des anomalies qu’il prétend reconnaître. Il balaye les ports, il ouvre une session en clair, il lit le partage, il produit un flot de paquets. Il recommence, et cette fois la capture contient exactement ce qu’il cherchait, avec une heure connue et une signature que n’importe quel autre enquêteur retrouvera le même jour.
-
-La différence entre ce trafic et le trafic de l’incident est l’adresse qui l’émet. La reproduction vient du poste de l’enquêteur, et l’incident vient d’une autre machine. La nature des paquets, leur ordre et leur signature sont les mêmes : seule l’origine change, et cette différence se dit en toutes lettres dans le constat.
+Reste la difficulté du métier : on ne peut pas attendre qu’un incident se produise sous ses yeux. L’enquêteur provoque donc lui-même chaque anomalie qu’il prétend reconnaître, depuis son propre poste, puis recommence, de sorte que la capture contienne exactement ce qu’il cherchait, avec une heure connue et une signature que tout autre enquêteur retrouvera le même jour. Entre cette reproduction et le trafic de l’incident, une seule différence compte : l’adresse qui l’émet. Le chapitre en tire le fichier `~/enquete/anomalies.md`, où cette différence est écrite en toutes lettres.
 
 ### Le vocabulaire en clair
 
@@ -767,24 +758,17 @@ Le fichier `anomalies.md` consigne qu’une session a été ouverte sur le port 
 
 ## Chapitre 4 — M4 : Utilisation des journaux et des outils d’analyse réseau (13h00–16h00)
 
-Ce chapitre couvre le module 4 du programme imposé par le client. Le module énonce trois families de journaux, puis trois outils : les journaux de pare-feu, de routeur et de serveur ; puis Zeek, Suricata et Splunk. Le chapitre suit cet ordre. Les deux premières parties posent la méthode de lecture des journaux, la troisième traite le moteur de détection présent dans l’image, et la quatrième traite les deux outils absents.
+### Préambule — lire les journaux et croiser les sources
+Au chapitre 3, l’enquêteur a regardé le trafic. Il a vu passer des demandes de connexion, une session en clair, un dialogue sur un partage, un flot de paquets. Sa capture lui dit ce qui a circulé, mais pas qui a décidé, ni ce que les machines ont pensé de ce qu’elles ont reçu. Or chacun de ces actes laisse une ligne datée quelque part : une machine qui refuse une connexion, un routeur qui change d’état, un serveur de fichiers qui accepte une session. L’ensemble de ces lignes complète la capture, il ne la remplace jamais.
 
-### Préambule — ce que les machines ont écrit pendant que le réseau travaillait
-
-Au chapitre 3, l’enquêteur a regardé le trafic. Il a vu passer des demandes de connexion, une session en clair, un dialogue sur un partage, un flot de paquets. Sa capture lui dit ce qui a circulé, mais pas qui a décidé, ni ce que les machines ont pensé de ce qu’elles ont reçu.
-
-Une machine qui refuse une connexion, un routeur qui change d’état, un serveur de fichiers qui accepte une session : chacun de ces actes laisse une ligne datée quelque part. Cette ligne s’appelle une entrée de journal. Un journal se lit comme un registre : chaque ligne dit qu’à telle heure, telle machine, tel programme a consigné telle chose.
-
-L’analogie qui aide le plus : la capture est une caméra de surveillance, elle enregistre des images. Le journal est un registre de présence, il enregistre des passages. Une caméra montre ce qui s’est passé sans dire qui était là. Un registre dit qui est passé, mais ne montre pas le contenu. Ce qui fait la preuve, ce n’est ni l’un ni l’autre seul : c’est le moment où les deux concordent.
-
-L’enjeu du chapitre est donc concret. L’enquêteur doit apprendre à lire trois sources qu’il n’a jamais ouvertes, à en extraire l’essentiel sans noyer le dossier, à écrire lui-même une règle de détection pour vérifier qu’il sait ce qu’une détection peut et ne peut pas voir, puis à produire un fichier d’alertes qui tiendra lieu de pièce au dossier du troisième jour.
+L’enjeu du chapitre est donc concret. L’enquêteur doit apprendre à lire trois sources qu’il n’a jamais ouvertes, en extraire l’essentiel sans noyer le dossier, écrire lui-même une règle de détection pour vérifier qu’il sait ce qu’une détection peut et ne peut pas voir, puis produire le fichier d’alertes `~/enquete/alertes-suricata.txt`, qui tiendra lieu de pièce au dossier du troisième jour.
 
 ### Le vocabulaire en clair
 
 | Terme | En clair | Dans ce chapitre |
 |-------|----------|------------------|
 | Journal | Une suite de lignes, chacune horodatée, décrivant un événement survenu sur une machine | Les trois sources que l’enquêteur peut lire |
-| Entrée de journal | Une seule ligne de ce registre, l’unité de travail de l’enquêteur | Une ligne de `journal-reseau.log` |
+| Entrée de journal | Une seule ligne du journal, l’unité de travail de l’enquêteur | Une ligne de `journal-reseau.log` |
 | Étiquette | Le nom du programme qui a écrit la ligne, qui dit de quelle machine vient le message | `poste-compromis`, `samba-fichiers`, `controleur:` |
 | Collecteur | La machine dont le rôle est de rassembler les journaux de toutes les autres en un point | `10.10.0.50`, dont le fichier est lu par l’enquêteur |
 | syslog | La convention qui organise une ligne de journal : qui, quand, quoi | Le format des lignes du journal rassemblé |

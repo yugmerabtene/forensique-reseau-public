@@ -59,15 +59,10 @@ Les deux chapitres de la journée forment une chaîne. Le cadre écrit le matin 
 
 ## Chapitre 1 — M1 : Introduction à la forensique réseau (9h00–11h00)
 
-Ce chapitre couvre le module 1 du programme imposé par le client : les concepts de collecte, de préservation et d’analyse, les quatre types de données d’un réseau, et les différences entre réseau local et réseau étendu.
+### Préambule — fixer le périmètre avant de toucher aux machines
+L’enquêteur arrive sur un réseau qui n’attend pas. Le trafic continue pendant qu’il regarde, les journaux se remplacent, les connexions se referment et ne laissent qu’un souvenir partiel : on ne peut pas demander au réseau de se mettre en pause pour être photographié. Sa première décision n’a rien de technique. Il délimite ce qu’il va examiner, il se place où il peut le voir, et il note ce qu’il a vu.
 
-### Préambule — ce qui se joue dans les premières heures
-
-Un incendie ne laisse pas le temps d’attendre. L’enquêteur arrive, et il trouve devant lui une scène qui a déjà bougé : les secours ont ouvert les portes, les pompiers sont arrivés, les témoins sont partis. S’il ne commence pas par protéger ce qui reste, il ne saura plus rien. Sa première décision n’a rien de technique : elle consiste à délimiter une zone, à ne plus y toucher, et à noter qui entre, à quelle heure, et qui emporte quoi.
-
-Un réseau se comporte comme cette scène, avec une difficulté supplémentaire : il n’est pas immobile. Le trafic continue pendant que l’on regarde, les journaux tournent et se remplacent, les connexions se referment et ne laissent plus qu’un souvenir partiel. On ne peut pas demander au réseau de se mettre en pause pour être photographié. L’enquêteur doit donc décider à l’avance ce qu’il va regarder, où il va se placer pour le voir, et comment il notera ce qu’il a vu.
-
-C’est tout l’objet de ce premier chapitre. Il ne demande aucune compétence nouvelle : il donne un vocabulaire, et il fait écrire par chaque participant le document qui fixe ce qu’il entend faire. Ce document sera la première preuve du laboratoire. Il sera relu à 11h00, et la capture de l’après-midi obéira à ses limites. Un enquêteur qui commence par capturer avant d’avoir écrit son périmètre capture souvent la mauvaise chose, avec beaucoup de rigueur et pour rien.
+Ce chapitre ne demande aucune compétence nouvelle. Il donne le vocabulaire de l’enquête numérique et fait écrire à chaque participant le document qui fixe le périmètre, `~/enquete/cadre-enquete.md`, première pièce du dossier. Ce document sera relu à 11h00, et la capture de l’après-midi obéira à ses limites. Un enquêteur qui commence par capturer avant d’avoir écrit son périmètre capture souvent la mauvaise chose, avec beaucoup de rigueur et pour rien.
 
 ### Le vocabulaire en clair
 
@@ -541,17 +536,12 @@ Le chapitre 2 applique le cadre. La capture qui suit ne couvre que les deux segm
 
 ## Chapitre 2 — M2 : Capture et collecte des données réseau (11h00–12h00 et 13h00–16h00)
 
-Ce chapitre couvre le module 2 du programme imposé par le client : la collecte des données réseau avec `tcpdump` et Wireshark, et l’identification des éléments critiques d’un paquet pour l’analyse forensique.
-
 Le chapitre occupe deux créneaux séparés par la pause déjeuner : une heure de 11h00 à 12h00, puis trois heures de 13h00 à 16h00. C’est le plus long de la formation. Le matin, le travail porte sur le point d’observation et sur la lecture d’un en-tête de paquet ; l’après-midi, sur les techniques de capture puis sur le laboratoire qui produit la capture de référence et l’inventaire des hôtes. Après la pause, le contexte tient en une ligne : la capture qui suit se fait là où l’enquêteur est branché, c’est-à-dire sur le segment du site central 10.10.0.0/24, et toute acquisition qui sortirait de ce cadre serait inscrite au journal avec son motif.
 
-### Préambule — l’empreinte de cire
+### Préambule — produire une copie datée et fidèle du trafic
+Un enquêteur ne peut pas emporter le réseau : il n’en garde qu’une copie, prise à un instant précis, et cette copie se décide en trois choix — où se placer, quand commencer, combien conserver. Chacun peut faire perdre la preuve. Se placer du mauvais côté ne montre pas le dialogue entre deux machines, commencer trop tard perd l’ouverture d’une session, conserver trop de données ne laisse que le début de chaque message. Aucune de ces erreurs n’est visible au moment où on la commet : elles se découvrent le lendemain, quand la question à laquelle la capture devait répondre a changé de forme.
 
-Un enquêteur ne peut pas emporter le réseau. Il ne peut ni le poser sur une table, ni l’observer à sa source, comme on observe une pièce détachée d’un ordinateur. Il n’en garde qu’une empreinte. L’image la plus juste est celle du sceau de cire : on applique une cire molle sur un objet, on retire, et il reste une marque. L’enquêteur n’a jamais vu l’objet lui-même, seulement la marque — et la marque dépend entièrement des décisions qu’il a prises avant d’appuyer.
-
-Ces décisions sont au nombre de trois : où il se place, à quel moment il appuie, et avec quelle force. Chacune peut faire perdre la preuve. Se placer du mauvais côté ne montre pas le dialogue entre deux machines. Appuyer trop tard ne montre pas l’ouverture d’une session. Appuyer trop fort ne montre plus que le début de chaque message, parce que le reste a été coupé. Aucune de ces erreurs n’est visible au moment où on la commet : elles ne se découvrent que le lendemain, quand la question à laquelle la capture devait répondre a changé de forme.
-
-C’est tout ce que traite ce chapitre. Il ne parle encore ni d’incident, ni d’attaque, ni de responsable. Il parle de l’opération qui précède les deux : obtenir une copie datée et fidèle, puis dire précisément ce qu’elle contient et ce qu’elle ne contient pas. Le cadre écrit ce matin en fixe les règles ; ce chapitre les exécute, commande par commande. À la fin de l’après-midi, le dossier `~/enquete` contient une capture que l’on peut mesurer, un inventaire que l’on peut contester, et les empreintes qui prouvent que ni l’un ni l’autre n’a bougé depuis sa création.
+Ce chapitre exécute le cadre écrit ce matin, commande par commande, et il ne parle encore ni d’incident, ni d’attaque, ni de responsable. Il produit la copie datée du trafic, puis dit précisément ce qu’elle contient et ce qu’elle ne contient pas. Au terme de l’après-midi, le dossier `~/enquete` contient la capture de référence, l’inventaire des hôtes, et les empreintes qui prouvent que ni l’un ni l’autre n’a bougé depuis sa création.
 
 ### Le vocabulaire en clair
 

@@ -59,17 +59,10 @@ Cette journée ne part pas de zéro : elle consomme les deux livrables de la jou
 
 ## Chapitre 5 — M5 : Répondre à un incident de sécurité réseau (9h00–12h00)
 
-Ce chapitre couvre le module 5 du programme imposé par le client. Le module énonce quatre décisions : isoler la machine compromise, collecter les preuves, tenir un journal des actions de l’enquêteur, et retracer l’attaque ainsi que son vecteur. Le chapitre suit exactement cet ordre. Les deux premières parties traitent de l’isolement et de la collecte, la troisième du suivi des actions, et la quatrième de la reconstitution du vecteur.
+### Préambule — répondre à l’incident sans détruire la preuve
+L’erreur classique, celle qui condamne une enquête, consiste à agir dans le désordre. Un administrateur inquiet coupe le câble de la machine compromise : le geste arrête peut-être l’intrus, mais il emporte avec lui tout ce qui n’avait pas encore été mis à l’abri, et il laisse un trou de plusieurs minutes dans le dossier. Le réseau ajoute une difficulté propre à l’informatique : le scénario qui rejoue l’incident dans ce laboratoire revient environ toutes les neuf minutes et sept secondes (9 min 07 s), et il recommencera demain sans demander l’autorisation. L’enquêteur ne peut pas tout voir ; il doit choisir ce qu’il garde, et il doit écrire ce qu’il a choisi.
 
-### Préambule — ce qui se joue entre l’alerte et le rapport
-
-Un service hospitalier reçoit un patient qui présente une fièvre. Le médecin ne se lève pas pour annoncer une fièvre : il isole d’abord le malade, parce qu’une fièvre peut se transmettre ; il note ensuite qui est entré dans la chambre et qui a touché quoi ; il vérifie enfin d’où vient l’infection. Trois gestes, dans cet ordre, et le premier n’est jamais d’allumer la centrifugeuse.
-
-L’erreur classique, celle qui condamne une enquête, consiste à faire les gestes dans le désordre. Si l’on éteint le moniteur cardiaque avant d’avoir lu son tracé, on a arrêté la contagion et on a perdu la preuve : la mémoire de l’appareil ne se rallume pas. Sur un réseau, l’équivalent existe et il est quotidien. Un administrateur inquiet coupe le câble de la machine compromise ; ce geste arrête peut-être l’intrus, mais il emporte avec lui tout ce qui n’avait pas encore été mis à l’abri, et il laisse un trou de plusieurs minutes dans l’enquête.
-
-Le réseau ajoute une difficulté propre à l’informatique. Le scénario qui rejoue l’incident dans ce laboratoire revient environ toutes les neuf minutes et sept secondes (9 min 07 s), et il recommencera demain sans demander l’autorisation. L’enquêteur travaille donc sur une scène qui bouge, comme un répondant qui travaille sur un incident qui n’attend pas. Il ne peut pas tout voir ; il doit choisir ce qu’il garde, et il doit écrire ce qu’il a choisi.
-
-Reste une question à laquelle presque personne ne répond vite : qui a fait quoi, et quand. Un geste non écrit est un geste qui n’a pas eu lieu. C’est pour cela que ce chapitre ne commence pas par une commande de capture, mais par une décision écrite, et par un fichier où chaque acte de la journée sera consigné avec son instant et son auteur. Ce fichier sera relu au chapitre suivant, et il y figurera des gestes que l’enquêteur préférera ne pas avoir faits.
+Reste une question à laquelle presque personne ne répond vite : qui a fait quoi, et quand. Un geste non écrit est un geste qui n’a pas eu lieu. C’est pour cela que ce chapitre ne commence pas par une commande de capture, mais par une décision écrite, et par `~/enquete/journal-actions.txt`, où chaque acte de la journée sera consigné avec son instant et son auteur. Ce fichier sera relu au chapitre suivant, et il y figurera des gestes que l’enquêteur préférera ne pas avoir faits.
 
 ### Le vocabulaire en clair
 
@@ -724,13 +717,10 @@ La capture `~/enquete/incident.pcap` a été ouverte pendant seize minutes et co
 
 ## Chapitre 6 — M6 : Rédiger le rapport d’enquête réseau (13h00–16h00)
 
-### Préambule — transformer une chronologie en un rapport qui peut être lu par un tiers
+### Préambule — transformer la chronologie en un rapport
+La chronologie produite au chapitre 5 est un document de travail : elle ordonne les faits, elle nomme les sources et elle précise la réserve de précision. Ce n’est pas encore un rapport d’enquête. Un rapport s’adresse à un destinataire qui n’a pas participé aux gestes : il doit exposer le périmètre, la méthodologie, l’analyse, les résultats, les recommandations, la traçabilité et la conformité, sans supposer que le lecteur connaît le laboratoire.
 
-Un médecin qui vient de soigner un patient ne se contente pas d’écrire « il a eu de la fièvre ». Il rédige un compte rendu à destination de ses collègues : il indique qui il a examiné, quand il l’a examiné, ce qu’il a observé, ce qu’il en conclut et ce qu’il recommande. Ce compte rendu doit permettre à un autre médecin, qui n’était pas présent, de comprendre la situation et de poursuivre le soin sans avoir à deviner.
-
-La même exigence s’applique à une enquête numérique. La chronologie produite au chapitre 5 est un document de travail : elle ordonne les faits, elle nomme les sources et elle précise la réserve de précision. Elle n’est pas encore un rapport d’enquête. Un rapport d’enquête s’adresse à un destinataire qui n’a pas participé aux gestes : il doit exposer le périmètre, la méthodologie, l’analyse, les résultats, les recommandations, la traçabilité et la conformité. Il ne doit pas supposer que le lecteur connaît le laboratoire.
-
-Le chapitre 6 transforme donc la chronologie `~/enquete/chronologie-incident.md` en un rapport d’enquête complet, dont l’enquêteur dicte le contenu et dont les blocs de commandes du LAB assurent la transcription. Ce rapport ne produit aucune nouvelle mesure : il organise des faits déjà prouvés, déjà scellés et déjà inscrits dans les journaux. Il respecte la chaîne de conservation en ne réécrivant jamais les pièces originales, et il cite toujours les chemins des fichiers qui les prouvent.
+Ce chapitre transforme donc `~/enquete/chronologie-incident.md` en un rapport d’enquête complet, que l’enquêteur dicte et dont les blocs de commandes du LAB assurent la transcription. Il ne produit aucune mesure nouvelle : il organise des faits déjà prouvés, déjà scellés et déjà inscrits dans les journaux. Il respecte la chaîne de conservation en ne réécrivant jamais les pièces originales, et il cite toujours les chemins des fichiers qui les prouvent.
 
 ### Le vocabulaire en clair
 
@@ -796,7 +786,7 @@ Un rapport d’enquête réseau se structure en sections obligatoires. Chacune a
 | Traçabilité | Prouver la chaîne | Liste des livrables, empreintes, journaux |
 | Conformité | Attester le respect | Règles appliquées, contrôle effectué |
 
-Cette structure est imposée par le syllabus (M6). Elle est respectée strictement dans le LAB.
+Cette structure est reprise à l’identique dans le LAB.
 
 La figure ci-dessous montre les neuf sections dans l’ordre du rapport et, pour chacune, la pièce dont les faits sont tirés. Le schéma se lit de haut en bas, par groupes de trois sections : chaque groupe répond à une question, et le nœud relié en pointillés à droite d’une section nomme le fichier qui l’alimente.
 
