@@ -7,7 +7,8 @@ vulgarisé, un vocabulaire en clair, une répartition du temps, des techniques
 expliquées puis un LAB qui produit un livrable repris par le suivant.
 
 Le contrôle vérifie :
-  - structure : titre, date, mode d'emploi, objectifs, planning, fil du jour
+  - structure : titre, date, objectifs, planning, fil du jour
+  - annexe du code du laboratoire présente dans les trois journées
   - jours : trois fichiers, deux chapitres par journée
   - découpage : 360 min de formation par journée, pause déjeuner déduite
   - en-tête de chapitre cohérent avec les créneaux du planning
@@ -61,6 +62,7 @@ SECTIONS_JOUR = [
     "## Ressources supplémentaires",
     "### Outils utilisés",
     "### Références",
+    "## Annexe — Le code du laboratoire",
 ]
 
 # Chaque rubrique obligatoire du gabarit, avec son niveau de titre exact.
@@ -370,8 +372,21 @@ def controler_reseau(fichier, texte):
     Le masque 0.0.0.0/0 des listes de contrôle d'accès et l'adresse de boucle
     interne 127.0.0.1 sont enseignés : ce ne sont pas des segments du
     laboratoire, mais ce ne sont pas non plus des données client.
+
+    Le pont Docker de chaque segment est créé en /23, et non en /24 : c'est un
+    choix délibéré, qui place la passerelle technique du pont en dehors du /24
+    réellement utilisé par le laboratoire. Ces valeurs sont des paramètres du
+    pont, jamais des adresses d'hôtes, et le code du laboratoire les reproduit
+    dans l'annexe. Les tolérer ici évite de signaler une valeur qui est
+    correcte, tout en gardant la règle stricte sur tout le reste du support.
     """
-    segments_autorises = {"10.10.0.0/24", "10.20.0.0/24", "0.0.0.0/0"}
+    segments_autorises = {"10.10.0.0/24", "10.20.0.0/24", "0.0.0.0/0",
+                          "10.10.0.0/23", "10.20.0.0/23",
+                          "10.10.1.0/24", "10.20.1.0/24"}
+    passerelles_du_pont = {"10.10.1.253", "10.20.1.253"}
+    # L'adresse de base du quartier que le pont se reserve, ecrite sans son
+    # masque dans les commentaires du laboratoire.
+    bases_du_pont = {"10.10.1.0", "10.20.1.0"}
     for segment in set(re.findall(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.0/\d{1,2}\b", texte)):
         if segment not in segments_autorises:
             fail(fichier, f"segment hors laboratoire : {segment}")
@@ -386,7 +401,8 @@ def controler_reseau(fichier, texte):
         octets = [int(o) for o in adresse.split(".")]
         if len(octets) != 4 or any(o > 255 for o in octets):
             continue
-        if adresse in ("0.0.0.0", "127.0.0.1"):
+        if adresse in ("0.0.0.0", "127.0.0.1") or adresse in passerelles_du_pont \
+                or adresse in bases_du_pont:
             continue
         if not (adresse.startswith("10.10.0.") or adresse.startswith("10.20.0.")):
             fail(fichier, f"adresse hors laboratoire : {adresse}")

@@ -55,7 +55,7 @@ RUN find /usr/share/doc /usr/share/man /usr/share/info /usr/share/locale \
 
 # Certificat de démonstration du serveur applicatif. Il est généré ici, dans
 # l'image, et n'existe dans aucun fichier du dépôt : la clé privée qui accompagne
-# ce certificat est un artefact de laboratoire, jamais une credential d'un système
+# ce certificat est un artefact de laboratoire, jamais un secret d'un système
 # réel. Le support ne la montre pas et ne demande pas de la lire.
 RUN set -eu; \
    mkdir -p /etc/lab \

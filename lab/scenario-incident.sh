@@ -6,15 +6,16 @@
 # boucle les comportements qui fondent l'enquête des trois jours, à faible
 # intensité pour ne pas perturber la machine du formateur.
 #
-# Toutes les cibles sont sur le segment du site central : c'est là que le poste de
-# l'enquêteur et le moteur de détection observent le trafic, sans qu'aucun LAB
-# n'ait besoin du relais entre les deux segments.
+# Les quatre comportements principaux visent le segment du site central, où le poste de
+# l'enquêteur et le moteur de détection observent le trafic. Un cinquième comportement
+# vise le serveur de la filiale, ce qui explique la présence de la seconde interface
+# du poste compromis.
 #
 # Ce qu'il produit, et ce que le support en tirera :
 #
 #   1. Un balayage des ports du serveur de fichiers 10.10.0.30, à partir de la
 #      filiale. C'est l'anomalie que le chapitre sur l'analyse des paquets devra
-#      repérer, et le filtre BPF du support le targeted directement.
+#      repérer, et le filtre BPF du support le ciblera directement.
 #   2. Des tentatives de connexion Telnet en clair vers 10.10.0.30, avec un
 #      couple identifiant et mot de passe transmis sans chiffrement. La capture
 #      contient donc le mot de passe en clair : c'est la preuve que le support
@@ -26,7 +27,7 @@
 #
 # Un cinquième comportement, propre à la filiale, sert de témoin : le poste
 # compromis balaie aussi le serveur de la filiale. Le chapitre sur l'analyse des
-# paquets Constatera alors que la même adresse produit deux activités différentes
+# paquets constatera alors que la même adresse produit deux activités différentes
 # selon le segment observé, ce qui est la démonstration que l'adresse seule ne
 # suffit pas à caractériser un flux.
 #
@@ -47,7 +48,7 @@ MOT_DE_PASSE_SMB="lab-2026"
 # journaliser écrit une ligne horodatée à deux endroits : sur la sortie standard,
 # reprise par « docker logs », et dans un fichier du conteneur. Le fichier est
 # indispensable, car « docker exec -d » détache le processus sans lui laisser de
-# sortie attached : sans ce fichier, rien ne prouverait que le scénario tourne, et
+# sortie attachée : sans ce fichier, rien ne prouverait que le scénario tourne, et
 # une erreur de commande resterait invisible. Le fichier est de surcroît une
 # horloge de l'incident : il date chaque comportement observé.
 journaliser() {
@@ -126,10 +127,11 @@ flot_icmp() {
 }
 
 # --- Boucle principale ---------------------------------------------------------
-# Chaque comportement est joué une fois toutes les huit minutes. Le délai est
-# assez long pour que les journaux restent lisibles dans les trois journées, et
-# assez court pour qu'un apprenant qui commence un LAB tard trouve toujours une
-# activité à observer.
+# Chaque comportement est joué une fois par tour. Le tour dure environ neuf
+# minutes, dont huit minutes d'attente entre deux tours. Le délai est assez long
+# pour que les journaux restent lisibles dans les trois journées, et assez court
+# pour qu'un apprenant qui commence un LAB tard trouve toujours une activité à
+# observer.
 journaliser "scénario d'incident démarré sur $(hostname)"
 while true; do
     balayer

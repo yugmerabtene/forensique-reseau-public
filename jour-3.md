@@ -1276,3 +1276,20 @@ Zeek et Splunk sont absents de l’image et ne peuvent pas être installés dans
 | ANSSI — Gestion des preuves numériques | https://cyber.gouv.fr/ | Bonnes pratiques de conservation des preuves |
 | Suricata User Guide | https://docs.suricata.io/ | Alertes EVE, règles et journalisation |
 | NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response | https://csrc.nist.gov/publications/detail/sp/800-86/final | Méthodologie d’investigation et traçabilité |
+
+## Annexe — Le code du laboratoire
+
+Cette journée réutilise le laboratoire sans le modifier : aucune ligne du code n’est
+écrite ni exécutée pendant les LAB du jour 3. Le code complet est donc donné une
+seule fois, dans les annexes des deux premiers jours.
+
+| Fichier | Où le lire | Rôle |
+|---------|-----------|------|
+| `lab/telecharger-paquets.sh` | Annexe du jour 1 | Prépare les paquets qui construisent l’image |
+| `lab/Dockerfile` | Annexe du jour 1 | Décrit l’image commune à tous les conteneurs |
+| `lab/construire-lab.sh` | Annexe du jour 1 | Monte, vérifie et relance le laboratoire |
+| `lab/regles-detection.rules` | Annexe du jour 2 | Règles Suricata de l’incident |
+| `lab/scenario-incident.sh` | Annexe du jour 2 | Rejoue les comportements de l’incident |
+
+Les deux seules commandes utilisées aujourd’hui sont `lab/construire-lab.sh verifier`
+et `lab/construire-lab.sh relancer`, rappelées au début de chaque LAB.

@@ -281,6 +281,15 @@ rétrogradée d'un niveau sortirait du chapitre au rendu.]
 ### Outils utilisés
 
 ### Références
+
+## Annexe — Le code du laboratoire
+
+[Code complet de chaque fichier de `lab/`, reproduit verbatim, precede de son rôle
+et suivi d'une lecture commentée. Jour 1 : `telecharger-paquets.sh`, `Dockerfile`,
+`construire-lab.sh`. Jour 2 : `regles-detection.rules`, `scenario-incident.sh`.
+Jour 3 : renvoi motive vers les deux premieres annexes, pour ne pas dupliquer le
+code. Le code reproduit ne doit jamais etre corrige dans le support : il est
+compare octet pour octet au fichier reel.]
 ```
 
 ---

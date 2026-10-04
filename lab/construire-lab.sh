@@ -780,8 +780,8 @@ verifier() {
     err "tcpdump ne produit pas de capture exploitable"; echecs=$((echecs+1))
   fi
 
-  # 6. Suricata produit un journal EVE exploitable, et cet alertes contient au
-  #    moins une alerte issue des règles du laboratoire. Un journal rempli de
+  # 6. Suricata produit un journal EVE exploitable, et ce journal contient bien
+  #    au moins une alerte issue des règles du laboratoire. Un journal rempli de
   #    simples entrées de flux prouverait que le moteur tourne, pas qu'il
   #    détecte l'incident : c'est la seconde propriété qui rend le livrable possible.
   #
@@ -857,7 +857,7 @@ verifier() {
   #    inversée devant elle : dans la partie droite d'une substitution de
   #    paramètre, bash applique l'expansion du tild, et un tild nu y vaudrait le
   #    dossier personnel de la machine qui lance le script. Le contrôleur
-  #    afficherait alors un chemin de laboratory absent et l'apprenant chercherait
+  #    afficherait alors un chemin de laboratoire absent et l'apprenant chercherait
   #    au mauvais endroit.
   for fichier in /home/enqueteur/journal/journal-reseau.log \
                  /home/enqueteur/journal/journal-samba.log; do
@@ -873,8 +873,8 @@ verifier() {
   #
   #    Le contrôle ne se contente pas de lire un fichier : il provoque les
   #    événements qu'il veut vérifier. Exiger une trace déjà présente rendrait le
-  #    résultat dépendant de l'heure à laquelle la vérification est lancée, alors
-  #    que le scénario d'incident ne joue que toutes les huit minutes.
+  #    résultat dépendant de l'heure de lancement, alors que le scénario
+  #    d'incident ne joue qu'un tour toutes les neuf minutes environ.
   attendre_dans_journal() {
     local motif=$1 secondes=${2:-40}
     local fin=$(( SECONDS + secondes ))

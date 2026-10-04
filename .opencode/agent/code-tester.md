@@ -23,7 +23,7 @@ Charge le contexte projet dès le début de session : lis `.opencode/CONTEXT.md`
 
 Public : investigateurs en informatique légale, analystes en cybersécurité, administrateurs réseau. L'ensemble de la formation se déroule **sous Linux uniquement** : un hôte Ubuntu exécutant Docker, et un laboratoire dont l'image est `forensique-lab:2026`. Toutes les commandes réseau, les filtres BPF, les règles Suricata et les scripts du laboratoire doivent être validés dans ce laboratoire ; aucune procédure ne concerne Windows ni une autre distribution.
 
-Le laboratoire se pilote par `lab/construire-lab.sh`, qui accepte les actions `monter`, `verifier`, `scenario`, `arrêter` et `enquete`.
+Le laboratoire se pilote par `lab/construire-lab.sh`, qui accepte les actions `monter`, `verifier`, `scenario`, `relancer`, `arrêter` et `enquete`.
 
 # Mission
 

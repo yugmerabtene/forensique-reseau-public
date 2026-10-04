@@ -1315,3 +1315,383 @@ Chaque lien ci-dessous a été ouvert et vérifié au jour de la rédaction du s
 | Documentation du moteur de détection | https://docs.suricata.io/ | Journal au format JSON et mode de vérification des règles |
 | Site officiel de Zeek | https://zeek.org/ | Outil absent de l’image, remplacement exécutable fourni |
 | Site officiel de Splunk | https://www.splunk.com/ | Outil absent de l’image, remplacement exécutable fourni |
+
+## Annexe — Le code du laboratoire
+
+Cette annexe donne le code du laboratoire fichier par fichier, tel que l’apprenant
+l’exploite pendant les trois journées. Le code est reproduit intégralement : il
+n’est ni abrégé, ni simplifié, ni corrigé. Chaque fichier est précédé de son rôle et
+suivi d’une lecture commentée.
+
+Pourquoi cette annexe existe : un laboratoire dont on ne lit pas le code est une
+boîte noire. L’apprenant qui lit le script qui monte son poste comprend d’où
+viennent les machines, les adresses et les journaux qu’il analyse ensuite. Il peut
+alors contester une adresse, corriger une règle, refaire une capture : il agit sur
+un objet qu’il a lu.
+
+Ce que cette annexe ne montre pas : lire le code ne remplace pas l’exécution. Une
+ligne commentée reste une ligne non vérifiée tant que la commande correspondante
+n’a pas été lancée sur le poste de l’enquêteur.
+
+### Fichier 1 — `lab/regles-detection.rules` : les règles Suricata de l’incident
+
+Les règles installées avec Suricata sur cette image ne surveillent que le fonctionnement du moteur : erreurs de décodage, anomalies de flux. Aucune d’entre elles ne peut signaler un balayage de ports ou une connexion Telnet en clair.
+
+Ce fichier apporte donc les règles qui manquaient, écrites pour cet incident. Les identifiants commencent à 9 000 000, plage réservée au laboratoire, pour ne jamais entrer en collision avec celles de la distribution.
+
+Les règles sont volontairement simples. Une règle trop compliquée serait indéchiffrable pour un public qui découvre Suricata, et une règle importée sans être comprise n’enseigne rien.
+
+**Ce que le cours en fait.** Suricata charge ce fichier au démarrage dans le conteneur de la sonde. L’apprenant ne le modifie pas pendant le LAB, mais il le lit pour expliquer d’où vient chaque alerte du livrable `~/enquete/alertes-suricata.txt`.
+
+**Le code, en entier.**
+
+```text
+# Règles de détection du laboratoire « Forensique réseau ».
+#
+# Pourquoi ces règles existent
+# ----------------------------
+# Les fichiers de règles installés avec Suricata sur cette image ne contiennent que
+# des règles d'événements techniques : erreurs de décodeur, anomalies de flux,
+# événements des couches applicatives. Elles surveillent le fonctionnement du moteur,
+# pas l'activité du réseau du laboratoire. Aucune d'elles ne peut donc signaler un
+# balayage de ports, une connexion Telnet en clair ou un flot de paquets ICMP.
+#
+# Le chapitre consacré aux journaux et aux outils d'analyse doit pourtant produire
+# un livrable nommé « alertes-suricata.txt ». Ce fichier est ce qui rend ce livrable
+# possible : il contient des règles écrites pour cet incident, que l'apprenant peut
+# lire, comprendre et modifier.
+#
+# Les règles sont volontairement simples et commentées. Une règle trop compliquée
+# serait indéchiffrable pour un public d'analystes qui découvre Suricata, et une règle
+# importée sans être comprise n'enseigne rien.
+#
+# Convention de numérotation : les identifiants commencent à 9 000 000, plage réservée
+# aux règles du laboratoire, pour ne jamais entrer en collision avec celles de la
+# distribution, qui commencent à 2 000 000.
+#
+# Portée des conditions de flux
+# ----------------------------
+# Ce moteur observe l'interface par laquelle le poste compromis atteint le site
+# central. Il y capte donc les émissions de ce poste, dont la somme de contrôle n'a
+# pas encore été calculée par la carte réseau : le noyau du poste suspect les marque
+# comme invalides. Or l'état de flux de Suricata n'est pas fiable dans cette
+# situation, et les mesures le montrent : une règle portant « established » ne se
+# déclenche pas, alors que la même règle sans cet état se déclenche normalement.
+#
+# D'où le choix fait dans ce fichier : les règles qui portent une condition de
+# direction la déclarent « stateless », c'est-à-dire sans attente d'un état de
+# connexion. L'apprenant qui reprendra ces règles sur une interface où Suricata
+# reçoit normalement les paquets pourra remplacer « stateless » par « established ».
+
+# --- Balayage de ports ---------------------------------------------------------
+# Un service légitime ne provoque pas cinq segments SYN vers des ports inattendus en
+# trente secondes depuis la même adresse. Le seuil est le cœur de la règle : sans
+# lui, une seule connexion vers un port inhabituel déclencherait une alerte, et le
+# moteur deviendrait bruyant au point d'être abandonné.
+#
+# Ce que la règle prouve : une adresse a sondé plusieurs ports inhabituels en peu de
+# temps. Ce qu'elle ne prouve pas : que la sonde a réussi, ni que la cible est
+# vulnérable. La confirmation se fait dans la capture, chapitre sur l'analyse des
+# paquets.
+#
+# La direction « to_server » est explicite. Sans elle, Suricata signale que la règle
+# ne peut pas être évaluée dans le sens serveur vers client et la désactive de ce
+# côté : un avertissement au démarrage pour une règle qui n'a rien demandé, et que
+# l'apprenant lirait comme un défaut de son installation.
+alert tcp any any -> any [21,25,53,110,139,143,3306,3389,993,995] (msg:"LABO Balayage de ports - port inhabituel sonde"; flow:to_server,stateless; flags:S; threshold:type limit, track by_src, count 5, seconds 30; classtype:network-scan; sid:9000001; rev:2;)
+
+# --- Connexion Telnet en clair -------------------------------------------------
+# Le protocole Telnet ne chiffre rien : ni l'identifiant ni le mot de passe ne
+# sont protégés. La présence d'une invite de connexion en clair sur le port 23 est
+# donc en soi l'anomalie. Cette règle ne cherche pas à deviner le couple
+# identifiant et mot de passe : elle constate l'usage d'un protocole en clair, ce
+# qui est le fait que le cours veut faire observer.
+#
+# Deux erreurs de direction sont possibles ici, et elles sont toutes deux
+# silencieuses : la règle se charge, le moteur démarre, et l'alerte ne vient
+# jamais. Les deux ont été mesurées sur ce laboratoire.
+#
+# La première consiste à écrire « any any -> any 23 » avec la condition
+# « flow:to_client ». L'invite « lab-fichiers login: » est émise par le serveur,
+# mais elle voyage du port 23 vers un port élevé attribué au client : elle ne
+# porte jamais le port 23 en destination. La règle ne peut donc pas se déclencher,
+# quelle que soit la condition de flux.
+#
+# La seconde consiste à remplacer la condition de flux par rien du tout et à
+# garder « -> any 23 ». Même erreur, pour la même raison.
+#
+# La correction est d'écrire la règle dans le sens du serveur vers le client, en
+# désignant le port 23 comme port source : c'est le serveur qui parle, et c'est
+# donc lui qui ouvre le segment. La condition « to_client » devient alors
+#_redondante_ et peut être omise.
+alert tcp any 23 -> any any (msg:"LABO Protocole en clair - session Telnet depuis le port 23"; flow:stateless; content:"login"; nocase; classtype:bad-unknown; sid:9000002; rev:3;)
+
+# --- Lecture d'un partage en clair ----------------------------------------------
+# SMB chiffre les échanges, mais la négociation initiale ne l'est pas : les
+# dialogues d'établissement voyagent en clair. La trame de négociation de SMB2
+# commence par la marque « FE 53 4D 42 », c'est-à-dire l'octet 0xFE suivi des
+# quatre lettres de SMB.
+#
+# La recherche ne fixe ni position ni profondeur. Le contenu d'un flux SMB
+# commence par un en-tête NetBIOS de quatre octets, qui précède la marque : une
+# règle qui chercherait cette marque à l'offset 0 ne se déclencherait jamais,
+# et l'absence d'alerte passerait pour une absence d'incident.
+alert tcp any any -> any 445 (msg:"LABO Acces a un partage - negociation SMB en clair"; flow:to_server,stateless; content:"|FE 53 4D 42|"; classtype:policy-violation; sid:9000003; rev:2;)
+
+# --- Flot de paquets ICMP ------------------------------------------------------
+# Un flot de deux cents paquets ICMP vers une seule adresse en quelques secondes
+# n'est pas une mesure de débit. Le seuil distingue le flot de la simple
+# vérification de joignabilité, qui ne produit que quelques paquets.
+#
+# La condition « itype:8 » ne retient que la demande d'écho. Sans elle, la règle
+# se déclenche sur tout ICMP, y compris sur les sollicitations de routeur en IPv6
+# émises périodiquement par la machine elle-même : le moteur produirait alors des
+# alertes sans rapport avec l'incident, et l'apprenant ne parviendrait plus à
+# distinguer une alerte utile d'une alerte parasite. C'est le premier réflexe de
+# quiconque écrit des règles : vérifier ce que la règle attrape réellement.
+alert icmp any any -> any any (msg:"LABO Deni de service - flot de paquets ICMP"; flow:stateless; itype:8; threshold:type limit, track by_src, count 50, seconds 10; classtype:attempted-dos; sid:9000004; rev:3;)
+```
+
+**Lecture commentée.** Les règles installées avec le moteur sur cette image ne
+surveillent que des événements techniques : erreurs de décodage, anomalies de flux,
+événements des couches applicatives. Elles regardent le fonctionnement du moteur, pas
+l’activité du réseau. Ce fichier apporte donc les règles qui manquaient, et il est la
+condition du livrable `~/enquete/alertes-suricata.txt`.
+
+Une règle se lit de gauche à droite : l’action, le protocole, l’adresse et le port
+d’origine, une flèche, l’adresse et le port de destination, puis les options entre
+parenthèses. L’action `alert` enregistre un événement sans rien bloquer : c’est ce qui
+distingue un moteur de détection d’un filtre. L’identifiant `sid` commence ici à
+9 000 000, plage réservée au laboratoire, alors que les règles de la distribution
+commencent à 2 000 000. Le champ `msg` est ce que l’enquêteur lira dans son livrable.
+
+Le choix commun aux quatre règles est l’absence d’état de connexion. Le moteur
+observe l’interface par laquelle le poste compromis atteint le site central : il capte
+les émissions de ce poste, dont la somme de contrôle n’a pas encore été calculée par la
+carte réseau. L’état de flux n’est alors pas fiable, et c’est mesuré : une règle portant
+un état ne se déclenche pas, alors que la même règle sans état se déclenche
+normalement.
+
+Les quatre familles suivent les quatre anomalies du chapitre sur l’analyse des
+paquets. Le balayage de ports retient cinq segments d’ouverture vers des ports
+inhabituels en trente secondes : sans ce seuil, une seule connexion vers un port
+étranger suffirait à déclencher l’alerte. La session en clair est écrite dans le sens
+du serveur vers le client, le port 23 en source, car les deux erreurs de sens possibles
+sont silencieuses : la règle se charge, le moteur démarre, et l’alerte ne vient jamais.
+La lecture de partage cherche la marque de négociation du protocole de partage, sans
+fixer de position, parce qu’un en-tête de quatre octets la précède dans le flux. Le
+flot de paquets ne retient que la demande d’écho, sinon les sollicitations
+périodiques de la machine elle-même produiraient des alertes sans rapport avec
+l’incident.
+
+Ce que ces règles garantisent : une alerte traçable à une règle nommée. Ce
+qu’elles ne prouvent pas : que la sonde a réussi, ni que la cible est vulnérable —
+la confirmation se fait dans la capture. L’absence d’alerte ne prouve pas l’absence
+d’événement.
+
+### Fichier 2 — `lab/scenario-incident.sh` : le générateur de l’incident
+
+Ce script s’exécute dans le conteneur du poste compromis. Il rejoue en boucle les comportements qui fondent l’enquête : un balayage des ports du serveur de fichiers, des connexions Telnet en clair, une lecture de partage, un flot de paquets ICMP, et un second balayage qui vise le serveur de la filiale.
+
+Les quatre comportements principaux visent le segment du site central, où le poste de l’enquêteur et le moteur de détection observent le trafic. Un cinquième comportement vise le serveur de la filiale, ce qui explique la présence de la seconde interface du poste compromis.
+
+C’est ce script qui rend reproductible l’incident analysé les jours suivants. Il ne sert pas à attaquer : il fabrique, à faible intensité, la trace que l’apprenant va apprendre à lire.
+
+**Ce que le cours en fait.** Le formateur le relance par `lab/construire-lab.sh scenario`. L’apprenant ne l’exécute pas lui-même : il en constate les effets dans la capture, sans savoir quelle commande les a produits.
+
+**Le code, en entier.**
+
+```bash
+#!/usr/bin/env bash
+# Générateur de l'incident du laboratoire « Forensique réseau ».
+#
+# Ce script est exécuté dans le conteneur du poste compromis (10.20.0.10 sur le
+# segment de la filiale, 10.10.0.60 sur le segment du site central). Il rejoue en
+# boucle les comportements qui fondent l'enquête des trois jours, à faible
+# intensité pour ne pas perturber la machine du formateur.
+#
+# Les quatre comportements principaux visent le segment du site central, où le poste de
+# l'enquêteur et le moteur de détection observent le trafic. Un cinquième comportement
+# vise le serveur de la filiale, ce qui explique la présence de la seconde interface
+# du poste compromis.
+#
+# Ce qu'il produit, et ce que le support en tirera :
+#
+#   1. Un balayage des ports du serveur de fichiers 10.10.0.30, à partir de la
+#      filiale. C'est l'anomalie que le chapitre sur l'analyse des paquets devra
+#      repérer, et le filtre BPF du support le ciblera directement.
+#   2. Des tentatives de connexion Telnet en clair vers 10.10.0.30, avec un
+#      couple identifiant et mot de passe transmis sans chiffrement. La capture
+#      contient donc le mot de passe en clair : c'est la preuve que le support
+#      utilisera pour enseigner la conservation des preuves.
+#   3. Une lecture de partage sur 10.10.0.30, qui produit des enregistrements
+#      d'accès dans le journal du serveur de fichiers.
+#   4. Un flot de paquets ICMP vers 10.10.0.20, qui correspond à la campagne de
+#      déni de service étudiée au chapitre sur les anomalies.
+#
+# Un cinquième comportement, propre à la filiale, sert de témoin : le poste
+# compromis balaie aussi le serveur de la filiale. Le chapitre sur l'analyse des
+# paquets constatera alors que la même adresse produit deux activités différentes
+# selon le segment observé, ce qui est la démonstration que l'adresse seule ne
+# suffit pas à caractériser un flux.
+#
+# Aucune de ces commandes ne sort du laboratoire : toutes les adresses sont
+# celles des deux segments de l'image, et le mot de passe est une valeur de
+# laboratoire documentée dans le tableau d'environnement du support.
+set -u
+
+CIBLE_FICHIERS="10.10.0.30"
+CIBLE_APPLI="10.10.0.20"
+CIBLE_FILIALE="10.20.0.20"
+PORT_TELNET=23
+PORT_SMB=445
+PARTAGE="partage"
+COMPTE_SMB="enquete"
+MOT_DE_PASSE_SMB="lab-2026"
+
+# journaliser écrit une ligne horodatée à deux endroits : sur la sortie standard,
+# reprise par « docker logs », et dans un fichier du conteneur. Le fichier est
+# indispensable, car « docker exec -d » détache le processus sans lui laisser de
+# sortie attachée : sans ce fichier, rien ne prouverait que le scénario tourne, et
+# une erreur de commande resterait invisible. Le fichier est de surcroît une
+# horloge de l'incident : il date chaque comportement observé.
+journaliser() {
+    printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" \
+        | tee -a "${JOURNAL_SCENARIO:-/var/log/journal-scenario.log}"
+}
+
+# --- 1. Balayage des ports -----------------------------------------------------
+balayer() {
+    journaliser "balayage de $CIBLE_FICHIERS depuis 10.10.0.60"
+    # -sT : Balayage TCP connecté. Il produit des connexions complètes, donc un
+    # SYN suivi d'un SYN-ACK puis d'un ACK. Un balayage SYN produit un SYN sans
+    # réponse pour chaque port fermé : la différence entre les deux est l'un des
+    # points que le chapitre sur l'analyse des paquets doit faire constater.
+    # Le poste compromis a deux interfaces : eth1 porte 10.10.0.60 (site central),
+    # eth0 porte 10.20.0.10 (filiale). Pour atteindre 10.10.0.30 sur le site central,
+    # on doit utiliser l'interface eth1.
+    nmap -sT -n -Pn -e eth1 --max-retries 1 --host-timeout 20s \
+         -p 21,22,23,25,53,80,110,139,143,443,445,993,995,3306,3389 \
+         "$CIBLE_FICHIERS" 2>/dev/null || true
+}
+
+# Le même balayage, lancé depuis l'interface de la filiale. Il produit une
+# activité de la même adresse qui n'apparaît que sur le segment de la filiale.
+balayer_filiale() {
+    journaliser "balayage de $CIBLE_FILIALE depuis 10.20.0.10"
+    # Pour atteindre 10.20.0.20 sur le segment de la filiale, on utilise eth0
+    # qui porte l'adresse 10.20.0.10.
+    nmap -sT -n -Pn -e eth0 --max-retries 1 --host-timeout 20s \
+         -p 21,22,23,80,443 "$CIBLE_FILIALE" 2>/dev/null || true
+}
+
+# --- 2. Connexion Telnet en clair ----------------------------------------------
+# Le démon Telnet d'Ubuntu ne démarre pas sans inetd, et busybox n'en fournit
+# pas. Le port 23 est donc tenu par un émetteur d'invite qui relit ce que le
+# client envoie : c'est de cette lecture que le mot de passe en clair se trouve
+# dans la capture. Sans ce composant, le chapitre sur la conservation des
+# preuves n'aurait aucune trace à montrer.
+tentative_telnet() {
+    local essai=$1
+    journaliser "tentative Telnet $essai vers $CIBLE_FICHIERS:$PORT_TELNET"
+    {
+        # La session Telnet commence par une négociation d'options, puis l'hôte
+        # présente son invite. Le client répond, et le mot de passe suit en
+        # clair sur le même lien.
+        printf '\xff\xfd\x18\xff\xfd\x20\xff\xfd\x23\xff\xfd\x27'
+        sleep 1
+        printf 'root\r\n'
+        sleep 1
+        # Valeur de laboratoire, jamais celle d'un système réel.
+        printf 'admin2026\r\n'
+        sleep 1
+        printf '\r\n'
+    } | timeout 12 busybox nc "$CIBLE_FICHIERS" "$PORT_TELNET" 2>/dev/null || true
+}
+
+# --- 3. Lecture d'un partage ---------------------------------------------------
+lire_partage() {
+    journaliser "lecture du partage $PARTAGE sur $CIBLE_FICHIERS:$PORT_SMB"
+    # L'authentification SMB transfère le couple en clair. Le serveur de
+    # fichiers journalise la connexion : le chapitre consacré aux journaux
+    # rapprochera cette ligne du flux observé dans la capture.
+    timeout 20 smbclient "//$CIBLE_FICHIERS/$PARTAGE" \
+        -U "$COMPTE_SMB%$MOT_DE_PASSE_SMB" -c 'ls' 2>/dev/null || true
+}
+
+# --- 4. Flot de déni de service ------------------------------------------------
+# Le débit est volontairement bas : ce qui intéresse le cours est la forme du
+# trafic observable dans une capture, pas la saturation du lien.
+flot_icmp() {
+    local paquet=$((100 + RANDOM % 200))
+    journaliser "flot ICMP vers $CIBLE_APPLI, $paquet paquets"
+    for _seq in $(seq 1 "$paquet"); do
+        ping -c1 -W1 "$CIBLE_APPLI" >/dev/null 2>&1
+    done
+}
+
+# --- Boucle principale ---------------------------------------------------------
+# Chaque comportement est joué une fois par tour. Le tour dure environ neuf
+# minutes, dont huit minutes d'attente entre deux tours. Le délai est assez long
+# pour que les journaux restent lisibles dans les trois journées, et assez court
+# pour qu'un apprenant qui commence un LAB tard trouve toujours une activité à
+# observer.
+journaliser "scénario d'incident démarré sur $(hostname)"
+while true; do
+    balayer
+    sleep 20
+    tentative_telnet 1
+    sleep 10
+    tentative_telnet 2
+    sleep 10
+    lire_partage
+    sleep 15
+    flot_icmp
+    sleep 10
+    balayer_filiale
+    journaliser "tour terminé, nouveau tour dans 8 minutes"
+    sleep 480
+done
+```
+
+**Lecture commentée.** Ce script s’exécute dans le conteneur du poste compromis et
+rejoue en boucle les comportements qui fondent l’enquête des trois jours, à faible
+intensité. Les quatre comportements principaux visent le segment du site central, où le
+poste de l’enquêteur et le moteur de détection observent le trafic. Un cinquième
+comportement vise le serveur de la filiale, ce qui explique la présence de la seconde
+interface du poste compromis : aucun LAB n’a besoin du relais entre les deux segments.
+
+La fonction `journaliser` écrit une ligne horodatée sur la sortie standard et dans un
+fichier du conteneur. Le fichier est indispensable : une commande détachée n’a pas de
+sortie attachée, donc sans lui rien ne prouverait que le scénario tourne, et une
+erreur resterait invisible. Il est aussi l’horloge de l’incident, puisque le chapitre
+sur les journaux s’en sert pour dater les événements et les rapprocher des alertes.
+
+Le premier comportement est un balayage de ports en mode connecté, et non en mode
+ouverture seule : le mode connecté produit des connexions complètes, tandis que
+l’autre produit un segment d’ouverture sans réponse pour chaque port fermé. C’est l’un
+des points que le chapitre sur l’analyse des paquets doit faire constater. Le poste
+compromis a deux interfaces, et l’interface est déclarée explicitement, sinon la
+commande choisirait au hasard et la moitié du trafic partirait par le mauvais segment.
+
+Le deuxième comportement est une tentative de session en clair vers le port 23. Le
+démon d’interconnexion de la distribution ne démarre pas et l’outil léger de l’image
+n’en fournit pas : le port est tenu par un émetteur d’invite qui relit ce que le client
+envoie. C’est de cette lecture que le mot de passe se trouve en clair dans la capture,
+et sans elle le chapitre sur la conservation des preuves n’aurait rien à montrer. Ce
+script joue le client : il négocie les options, puis envoie un identifiant et le mot de
+passe de laboratoire. Le troisième comportement lit un partage, que le serveur de
+fichiers journalise. Le quatrième produit un flot de requêtes d’écho vers le serveur
+applicatif, à débit bas : le cours étudie la forme du trafic, non la saturation du lien.
+
+Un cinquième comportement sert de témoin : le poste compromis balaie aussi le serveur de
+la filiale. Le chapitre sur l’analyse des paquets y constatera que la même adresse
+produit deux activités différentes selon le segment observé, et le chapitre sur les
+journaux en tirera que l’angle mort du moteur vient de sa position, non de ses règles.
+
+Chaque commande se termine sur un échec toléré, pour qu’une erreur unique n’arrête pas
+la boucle. La boucle attend huit minutes entre deux tours, et un tour complet dure
+environ neuf minutes et sept secondes : le délai est assez long pour que les journaux
+restent lisibles sur trois journées, et assez court pour qu’un apprenant qui commence
+tard trouve toujours une activité. Le script garantit que l’incident est reproductible et
+daté.
