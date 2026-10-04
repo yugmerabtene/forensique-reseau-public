@@ -125,7 +125,7 @@ done
 # apparaîtrait bien plus tard, sur un support sans rapport.
 ecrire_parametres() {
     python3 - "$1" "$2" "$LOGO" <<'PY'
-import pathlib, re, sys
+import os, pathlib, re, sys
 
 support, destination, logo = sys.argv[1], sys.argv[2], sys.argv[3]
 lignes = pathlib.Path(support).read_text(encoding="utf-8").splitlines()
@@ -143,19 +143,25 @@ def echapper(texte):
     return re.sub(r"([\\&%$#_{}~^])", r"\\\1", texte)
 
 
-jour = premier(r"^#\s+.*?[—–-]\s*(JOUR\s+\d+)")
+# Les valeurs de la couverture peuvent etre imposees par l'appelant, qui les
+# lit dans son environnement. Le document unique qui reunit les trois journees
+# n'a pas de journee unique : sans cette possibilite, l'extraction automatique
+# y prendrait le theme du premier jour, et la couverture porterait « JOUR 1 »
+# sous un titre qui en reunir trois.
+jour = os.environ.get("ASCENT_JOUR") or premier(r"^#\s+.*?[—–-]\s*(JOUR\s+\d+)")
 # Le titre du support porte l'intitule et la journee dans la meme ligne, par
 # exemple « Audit et Analyse des Réseaux — JOUR 1 ». La couverture les presente
 # sur deux lignes distinctes, l'intitule en grand et la journee en rouge : on
 # ne garde donc ici que ce qui precede la journee.
-intitule = premier(r"^#\s+(.+?)\s*$")
+intitule = os.environ.get("ASCENT_INTITULE") or premier(r"^#\s+(.+?)\s*$")
 intitule = re.sub(r"\s*[—–-]\s*JOUR\s+\d+\s*$", "", intitule)
 theme_complet = premier(r"^##\s+(.+)$")
-date = ""
+date = os.environ.get("ASCENT_DATE", "")
 m = re.search(r"\(([^()]*/\d{4})\)", theme_complet)
-if m:
+if m and not date:
     date = m.group(1)
 theme = re.sub(r"\s*\([^()]*\)\s*$", "", theme_complet)
+theme = os.environ.get("ASCENT_THEME") or theme
 
 valeurs = (("ascentlogo", logo), ("ascentintitule", intitule),
            ("ascentjour", jour), ("ascentdate", date), ("ascenttheme", theme))
