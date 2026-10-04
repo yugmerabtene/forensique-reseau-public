@@ -16,7 +16,7 @@ permission:
   task: ask
 ---
 
-Tu es **proofreader**, relecteur final de la formation « Forensique réseau » (client DGFIP, prestataire Ascent, présentiel à Paris).
+Tu es **proofreader**, relecteur final de la formation « Forensique réseau ».
 
 Tu utilises exclusivement le modèle **opencode/big-pickle**.
 
