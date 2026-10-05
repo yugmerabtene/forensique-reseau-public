@@ -434,6 +434,42 @@ def controler_filtres_bpf(fichier, texte):
     return len(vus)
 
 
+# Un serveur public n'a aucune obligation de répondre à la requête d'un robot :
+# certains refusent la méthode HEAD, d'autres limitent le nombre de requêtes ou
+# servent une page d'attente. Signaler ces réponses comme un lien rompu rend le
+# contrôle aléatoire, et un contrôle aléatoire est un contrôle auquel on apprend
+# à ne pas croire.
+#
+# Un lien n'est donc déclaré rompu que si deux tentatives consécutives échouent
+# de la même façon. Une adresse réellement morte échoue à chaque tentative ; une
+# panne de réseau passagère, elle, ne se reproduit pas. Les refus font preuve
+# que l'adresse existe : ils ne sont pas signalés, non plus que les redirections,
+# que le client HTTP suit déjà.
+REFUS = (403, 405, 429, 501)
+
+
+def interroger_lien(url, methode):
+    """Une tentative. Renvoie un verdict, jamais une exception.
+
+    Le corps de la réponse n'est pas lu : la méthode HEAD suffit à savoir si
+    l'adresse existe, et ne pas lire évite de télécharger une documentation
+    entière pour vérifier son en-tête.
+    """
+    requete = urllib.request.Request(url, method=methode,
+                                     headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(requete, timeout=20) as r:
+            if r.status < 400:
+                return "ok"
+            return "refus" if r.status in REFUS else "absent"
+    except urllib.error.HTTPError as e:
+        if e.code in REFUS:
+            return "refus"
+        return "absent"
+    except Exception as e:
+        return "injoignable (%s)" % type(e).__name__
+
+
 def controler_liens(fichier, texte):
     # L'adresse peut être la dernière colonne d'un tableau à deux colonnes
     # comme celle d'un tableau plus large qui ajoute une remarque : on la
@@ -443,18 +479,16 @@ def controler_liens(fichier, texte):
     liens = re.findall(r"^\| ([^\n|]+) \|(?:[^\n|]*\|)*\s*(https?://[^\s|\n]+)\s*\|",
                        texte, re.M)
     for nom, url in liens:
-        try:
-            req = urllib.request.Request(url, method="HEAD",
-                                         headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                if r.status >= 400:
-                    fail(fichier, f"lien « {nom.strip()} » -> HTTP {r.status}")
-        except urllib.error.HTTPError as e:
-            if e.code not in (403, 405, 501):
-                fail(fichier, f"lien « {nom.strip()} » -> HTTP {e.code}")
-        except Exception as e:
-            fail(fichier, f"lien « {nom.strip()} » inaccessible "
-                          f"({type(e).__name__})")
+        # Deux requêtes de tête, encadrées d'une requête complète : un serveur
+        # qui refuse la première répond parfois à la suivante, et l'inverse est
+        # vrai aussi. C'est la répétition, et non la première réponse, qui
+        # fait foi.
+        verdicts = [interroger_lien(url, m) for m in ("HEAD", "GET", "HEAD")]
+        if verdicts[0] == "ok":
+            continue
+        if sum(1 for v in verdicts if v.split()[0] in ("absent", "injoignable")) >= 2:
+            fail(fichier, f"lien « {nom.strip()} » -> {verdicts[0]}, "
+                          f"puis {verdicts[1]}, {verdicts[2]}")
     return len(liens)
 
 
