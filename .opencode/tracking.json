@@ -157,6 +157,11 @@
       "status": "créé, testé, document unique fabriqué et contrôlé",
       "last_modified": "2026-10-04",
       "description": "Assemble les trois journées en un seul PDF, export/forensique-reseau-dgfip.pdf. Le rendu n'est pas dupliqué : le script appelle export-pdf.sh sur le support assemblé, de sorte que la mise en page, le rendu des schémas et les contrôles de complétude restent ceux des trois PDF journaliers. L'assemblage retire les titres de niveau un, qui déclencheraient chacun une page de garde, rend la numérotation des figures continue sur les quatorze schémas, et insère un saut de page avant chaque journée, qu'un titre de section ne provoque pas de lui-même. Le décalage de numérotation est calculé et non recopié. Le contrôle final vérifie que la couverture ne nomme aucune journée, que les trois journées sont présentes et que la numérotation des figures est continue. Résultat : 136 pages, contre 138 pour les trois PDF journaliers, trois couvertures et trois sommaires remplacés par un seul de chaque."
+    },
+    ".opencode/agent/web-developer.md": {
+      "status": "created",
+      "last_modified": "2026-10-10",
+      "description": "Développeur web : génère presentation.html (slide deck horizontal, monofichier HTML/CSS/JS, schémas et logo intégrés)"
     }
   },
   "progress": {

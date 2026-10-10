@@ -309,6 +309,7 @@ sont pas décrits seulement dans ce fichier.
 | Rédacteur | `.opencode/agent/course-writer.md` | Rédaction des chapitres, modules, LAB, exercices |
 | Validateur | `.opencode/agent/code-tester.md` | Validation des commandes, filtres et laboratoire |
 | Relecteur | `.opencode/agent/proofreader.md` | Relecture finale et contrôle de conformité |
+| Développeur web | `.opencode/agent/web-developer.md` | Génère presentation.html (slide deck horizontal, monofichier, schémas intégrés) |
 | Contexte | `.opencode/CONTEXT.md`, clé `instructions` | Chargé dans chaque session |
 | Modèle imposé | `opencode/big-pickle` | Le seul modèle autorisé, sur les quatre agents |
 
