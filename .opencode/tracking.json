@@ -166,7 +166,7 @@
     "presentation.html": {
       "status": "produit et vérifié",
       "last_modified": "2026-10-10",
-      "description": "Support de présentation horizontal, monofichier auto-contenu : HTML, CSS et JavaScript dans un seul fichier, six cent dix kilo-octets, vingt-sept vues. Il présente les trois journées en synthèse — garde, sommaire, objectifs du syllabus, planning, laboratoire, chaîne des livrables, puis, chapitre par chapitre, les figures et les LAB, et enfin les commandes clés, les outils et la clôture. Le logo Ascent est incorporé en base64 et les douze schémas sont des SVG placés dans le document ; aucune ressource n'est chargée depuis le réseau, le fichier s'ouvre donc hors ligne. La navigation fonctionne au clavier, au doigt, par boutons et par pastilles, avec sommaire cliquable et barre de progression. Produit le 2026-10-10."
+      "description": "Support de présentation horizontal, monofichier auto-contenu : HTML, CSS et JavaScript dans un seul fichier, six cent dix kilo-octets, vingt-sept vues. Il présente les trois journées en synthèse — garde, sommaire, objectifs du syllabus, planning, laboratoire, chaîne des livrables, puis, chapitre par chapitre, les figures et les LAB, et enfin les commandes clés, les outils et la clôture. Le logo Ascent est incorporé en base64 et les douze schémas sont des SVG placés dans le document ; aucune ressource n'est chargée depuis le réseau, le fichier s'ouvre donc hors ligne. La navigation fonctionne au clavier, au doigt, par boutons et par pastilles, avec sommaire cliquable et barre de progression. Produit le 2026-10-10. Corrigé le 2026-10-10 : le libellé du SVG de la figure 9 portait « conchapitre » à la place de « conséquence » ; le texte est rétabli, le reste du balisage est inchangé."
     }
   },
   "progress": {
@@ -189,6 +189,6 @@
     "annexe_code": "produite : le code des cinq fichiers de lab/ est reproduit dans les cours, commenté, et vérifié caractère par caractère contre les fichiers réels",
     "document_unique": "produit : export/forensique-reseau-dgfip.pdf, 136 pages, une couverture, un sommaire, pagination continue, quatorze figures numérotées de 1 à 14",
     "readme": "créé le 2026-10-10 : sommaire cliquable vers les trois journées et leurs six chapitres, liens vers lab/ et le syllabus, commité et poussé avec cette mise à jour",
-    "presentation": "produit le 2026-10-10 : presentation.html, slide deck horizontal monofichier de vingt-sept vues, logo en base64, douze schémas SVG sans foreignObject après fusion des trois topologies redondantes, navigation clavier et tactile, sommaire et progression, hors ligne, chaîne des sept livrables reprise dans l'ordre."
+    "presentation": "produit le 2026-10-10 : presentation.html, slide deck horizontal monofichier de vingt-sept vues, logo en base64, douze schémas SVG sans foreignObject après fusion des trois topologies redondantes, navigation clavier et tactile, sommaire et progression, hors ligne, chaîne des sept livrables reprise dans l'ordre ; corrigé le 2026-10-10 (libellé « conséquence » rétabli dans le SVG de la figure 9)."
   }
 }
