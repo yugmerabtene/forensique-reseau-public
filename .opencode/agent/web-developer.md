@@ -8,12 +8,7 @@ permission:
   edit: allow
   glob: allow
   grep: allow
-  bash:
-    "ls *": allow
-    "find *": allow
-    "file *": allow
-    "which *": allow
-    "*": ask
+  bash: allow
   todowrite: allow
   task: ask
 ---
