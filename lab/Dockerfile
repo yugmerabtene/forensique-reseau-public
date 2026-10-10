@@ -31,7 +31,7 @@ ENV DEBCONF_NONINTERACTIVE_SEEN=true
 # Neutralisation du démarrage automatique des services : ces paquets lancent un
 # service au premier démarrage, ce qui n'a pas lieu dans une image de laboratoire.
 # Les services sont démarrés à la main par le constructeur, un par un, pour que
-# chaque port announced dans le support corresponde exactement à un service réel.
+# chaque port annoncé dans le support corresponde exactement à un service réel.
 RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d
 
 COPY debs /tmp/debs

@@ -59,7 +59,9 @@
 # isolation suppose des privilèges sur l'hôte : aucun LAB n'en dépend.
 #
 # Usage :
-#   ./construire-lab.sh monter     crée les réseaux et démarre les conteneurs
+#   ./construire-lab.sh construire construit l'image forensique-lab:2026
+#   ./construire-lab.sh monter     construit l'image si besoin, crée les réseaux
+#                                  et démarre les conteneurs
 #   ./construire-lab.sh verifier   vérifie la topologie et les journaux
 #   ./construire-lab.sh scenario   relance le scénario d'incident
 #   ./construire-lab.sh relancer   rétablit les services sans toucher au volume
@@ -203,6 +205,59 @@ configurer_enquete() {
   '
 }
 
+# L'image du laboratoire existe-t-elle déjà localement ?
+#
+# « docker run » tire une image absente d'un registre public avant de la lancer.
+# Sur une machine sans accès à un registre, ou hors ligne, il échoue alors par
+# « Unable to find image 'forensique-lab:2026' locally ». « monter » vérifie donc
+# la présence de l'image avant tout démarrage, et la construit lorsque nécessaire.
+image_presente() {
+  docker image inspect "$IMAGE" >/dev/null 2>&1
+}
+
+# ----------------------------------------------------------------- construire
+# Construire l'image du laboratoire à partir du Dockerfile et des paquets .deb
+# téléchargés sur l'hôte.
+#
+# Le dossier « debs » est exclu du dépôt : il est produit par
+# telecharger-paquets.sh, qui interroge les dépôts de la distribution et travaille
+# sans privilège. Lorsqu'il manque, il est donc reconstitué ici, afin qu'un dépôt
+# fraîchement cloné fonctionne dès la première commande, sans étape manuelle.
+#
+# L'étape reste disponible seule, sous la sous-commande « construire », et
+# « monter » ne l'appelle que lorsque l'image est absente.
+construire() {
+  if ! command -v docker >/dev/null 2>&1; then
+    err "docker n'est pas installé : impossible de construire l'image $IMAGE"
+    return 1
+  fi
+
+  # Le contexte de construction est le dossier du script, donc le dossier « lab »,
+  # qui contient le Dockerfile et le dossier des paquets. Le nom donné à l'image
+  # est exactement celui que le cours annonce et que « docker run » emploie.
+  local dossier_debs
+  dossier_debs="$(pwd)/debs"
+  if [ -d "$dossier_debs" ] \
+     && [ -n "$(find "$dossier_debs" -maxdepth 1 -name '*.deb' -print -quit 2>/dev/null)" ]; then
+    ok "paquets .deb déjà téléchargés"
+  else
+    log "paquets .deb absents : téléchargement des dépendances sur l'hôte"
+    if ! ./telecharger-paquets.sh; then
+      err "le téléchargement des paquets a échoué : vérifier l'accès aux dépôts"
+      err "l'image $IMAGE ne peut pas être construite sans ces paquets"
+      return 1
+    fi
+  fi
+
+  log "Construction de l'image $IMAGE"
+  if docker build -t "$IMAGE" . ; then
+    ok "image $IMAGE construite"
+  else
+    err "la construction de l'image $IMAGE a échoué"
+    return 1
+  fi
+}
+
 # ------------------------------------------------------------------- monter
 monter() {
   log "Arrêt d'une éventuelle précédente exécution"
@@ -213,6 +268,19 @@ monter() {
   # laboratoire, appartient à root et rendrait le dossier de travail inaccessible
   # à l'enquêteur : les livrables des LAB ne pourraient plus être écrits.
   docker volume rm -f flab-enquete >/dev/null 2>&1 || true
+
+  # L'image doit exister avant le premier « docker run ». Sans ce contrôle, Docker
+  # cherche l'image dans un registre public et échoue par « Unable to find image
+  # 'forensique-lab:2026' locally » : le formateur aurait alors à lancer
+  # « construire » à la main, ce que le cours ne demande pas. La construction
+  # automatique ne se déclenche que si l'image manque ; une image déjà construite
+  # est réutilisée telle quelle, sans reconstruction.
+  if image_presente; then
+    ok "image $IMAGE déjà présente"
+  else
+    log "image $IMAGE absente : construction automatique avant le montage"
+    construire
+  fi
 
   # Les réseaux sont créés avec un masque plus large que le segment utile et une
   # passerelle technique hors segment. Le réseau 10.10.0.0/23 englobe le segment
@@ -1251,7 +1319,7 @@ enquete() {
 # « relancer » est le remède non destructif : il rétablit les services d'un
 # laboratoire déjà monté sans toucher au volume, donc sans effacer les livrables.
 if [ $# -eq 0 ]; then
-  echo "Usage : $0 {monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2
+  echo "Usage : $0 {construire|monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2
   echo "Attention : « monter » recrée le volume du poste de l'enquêteur et" >&2
   echo "efface les livrables. Ne l'employez qu'avant le début de la séance." >&2
   echo "Pour réparer le laboratoire sans les effacer, employez « relancer »." >&2
@@ -1268,11 +1336,12 @@ if [ $# -eq 1 ] && [ "$1" = "enquete" ]; then
 fi
 
 case "$1" in
-  monter)    monter ;;
-  verifier)  verifier ;;
-  scenario)  scenario ;;
-  relancer)  relancer ;;
-  arrêter)   arrêter ;;
-  enquete)   shift; enquete "$@" ;;
-  *)         echo "Usage : $0 {monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2; exit 2 ;;
+  construire) construire ;;
+  monter)     monter ;;
+  verifier)   verifier ;;
+  scenario)   scenario ;;
+  relancer)   relancer ;;
+  arrêter)    arrêter ;;
+  enquete)    shift; enquete "$@" ;;
+  *)          echo "Usage : $0 {construire|monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2; exit 2 ;;
 esac

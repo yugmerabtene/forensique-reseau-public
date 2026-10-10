@@ -12,6 +12,8 @@ Le laboratoire est un ensemble de machines isolées, que le formateur monte une 
 lab/construire-lab.sh monter
 ```
 
+Lors du tout premier lancement, l’image `forensique-lab:2026` n’existe pas encore. La sous-commande `monter` la construit alors automatiquement, après avoir téléchargé sur l’hôte les paquets `.deb` qui la composent : cette préparation demande un accès aux dépôts de la distribution et prend quelques minutes. Les lancements suivants réutilisent l’image déjà construite et démarrent immédiatement. La construction peut aussi être demandée seule, par `lab/construire-lab.sh construire`.
+
 Cette commande recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
 
 ## Objectifs du Jour
@@ -161,7 +163,7 @@ Un réseau local est un réseau de voisinage. Toutes les machines partagent le m
 | Latence aller et retour (RTT) | Faible, quelques dizaines de microsecondes | Variable, de la milliseconde à la seconde | Un délai mesuré ne prouve pas que des paquets se soient perdus, et la perte d’un paquet ne prouve pas un délai mesurable |
 | Chiffrement | Rarement employée en local | Fréquemment employé sur les liens intersites | Le contenu peut être illisible même quand le flux est bien observé |
 
-La figure 1 montre la position de l’enquêteur et ce qu’elle permet d’observer. Le laboratoire comporte deux segments, et la passerelle du site central sait router de l’un à l’autre : ce relais existe, mais il ne permet à aucun dialogue de s’établir. Une demande qui part par la passerelle vers l’autre segment y arrive, et la réponse se perd avant de revenir. Aucun LAB de la formation ne fait donc transiter de trafic de l’un à l’autre.
+La figure 1 montre la position de l’enquêteur et ce qu’elle permet d’observer. Le laboratoire comporte deux segments, et la passerelle du site central porte une interface sur chacun d’eux. Docker isole cependant le passage d’un pont à l’autre : la passerelle ne relaie aucun trafic d’un segment vers l’autre. Aucun LAB de la formation ne fait donc transiter de trafic de l’un à l’autre.
 
 ```mermaid
 flowchart LR
@@ -1489,7 +1491,7 @@ ENV DEBCONF_NONINTERACTIVE_SEEN=true
 # Neutralisation du démarrage automatique des services : ces paquets lancent un
 # service au premier démarrage, ce qui n'a pas lieu dans une image de laboratoire.
 # Les services sont démarrés à la main par le constructeur, un par un, pour que
-# chaque port announced dans le support corresponde exactement à un service réel.
+# chaque port annoncé dans le support corresponde exactement à un service réel.
 RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d
 
 COPY debs /tmp/debs
@@ -1613,9 +1615,9 @@ service.
 
 ### Fichier 3 — `lab/construire-lab.sh` : monter, vérifier et relancer le laboratoire
 
-C’est le fichier que l’apprenant utilise le plus. Il crée les deux réseaux du laboratoire, démarre les conteneurs et sait les arrêter sans tout détruire.
+C’est le fichier que l’apprenant utilise le plus. Il construit l’image du laboratoire si elle manque, crée les deux réseaux, démarre les conteneurs et sait les arrêter sans tout détruire.
 
-Les sous-commandes utilisées pendant la formation sont `monter`, `verifier`, `relancer`, `scenario`, `enquete` et `arrêter`. La distinction entre `monter` et `relancer` est une règle de forensique, pas une commodité : `monter` recrée le volume du poste et efface donc les livrables déjà produits ainsi que les empreintes qui les scellent, alors que `relancer` rétablit les services sans toucher au volume.
+Les sous-commandes utilisées pendant la formation sont `construire`, `monter`, `verifier`, `relancer`, `scenario`, `enquete` et `arrêter`. La sous-commande `construire` prépare seule l’image du laboratoire ; `monter` l’appelle d’elle-même lorsque l’image manque, ce qui permet un premier montage sans commande préalable. La distinction entre `monter` et `relancer` est une règle de forensique, pas une commodité : `monter` recrée le volume du poste et efface donc les livrables déjà produits ainsi que les empreintes qui les scellent, alors que `relancer` rétablit les services sans toucher au volume.
 
 **Ce que le cours en fait.** C’est le fichier que l’apprenant manipule le plus : `lab/construire-lab.sh monter` avant la séance, puis `lab/construire-lab.sh verifier` et `lab/construire-lab.sh relancer` au début de chaque LAB.
 
@@ -1683,7 +1685,9 @@ Les sous-commandes utilisées pendant la formation sont `monter`, `verifier`, `r
 # isolation suppose des privilèges sur l'hôte : aucun LAB n'en dépend.
 #
 # Usage :
-#   ./construire-lab.sh monter     crée les réseaux et démarre les conteneurs
+#   ./construire-lab.sh construire construit l'image forensique-lab:2026
+#   ./construire-lab.sh monter     construit l'image si besoin, crée les réseaux
+#                                  et démarre les conteneurs
 #   ./construire-lab.sh verifier   vérifie la topologie et les journaux
 #   ./construire-lab.sh scenario   relance le scénario d'incident
 #   ./construire-lab.sh relancer   rétablit les services sans toucher au volume
@@ -1827,6 +1831,59 @@ configurer_enquete() {
   '
 }
 
+# L'image du laboratoire existe-t-elle déjà localement ?
+#
+# « docker run » tire une image absente d'un registre public avant de la lancer.
+# Sur une machine sans accès à un registre, ou hors ligne, il échoue alors par
+# « Unable to find image 'forensique-lab:2026' locally ». « monter » vérifie donc
+# la présence de l'image avant tout démarrage, et la construit lorsque nécessaire.
+image_presente() {
+  docker image inspect "$IMAGE" >/dev/null 2>&1
+}
+
+# ----------------------------------------------------------------- construire
+# Construire l'image du laboratoire à partir du Dockerfile et des paquets .deb
+# téléchargés sur l'hôte.
+#
+# Le dossier « debs » est exclu du dépôt : il est produit par
+# telecharger-paquets.sh, qui interroge les dépôts de la distribution et travaille
+# sans privilège. Lorsqu'il manque, il est donc reconstitué ici, afin qu'un dépôt
+# fraîchement cloné fonctionne dès la première commande, sans étape manuelle.
+#
+# L'étape reste disponible seule, sous la sous-commande « construire », et
+# « monter » ne l'appelle que lorsque l'image est absente.
+construire() {
+  if ! command -v docker >/dev/null 2>&1; then
+    err "docker n'est pas installé : impossible de construire l'image $IMAGE"
+    return 1
+  fi
+
+  # Le contexte de construction est le dossier du script, donc le dossier « lab »,
+  # qui contient le Dockerfile et le dossier des paquets. Le nom donné à l'image
+  # est exactement celui que le cours annonce et que « docker run » emploie.
+  local dossier_debs
+  dossier_debs="$(pwd)/debs"
+  if [ -d "$dossier_debs" ] \
+     && [ -n "$(find "$dossier_debs" -maxdepth 1 -name '*.deb' -print -quit 2>/dev/null)" ]; then
+    ok "paquets .deb déjà téléchargés"
+  else
+    log "paquets .deb absents : téléchargement des dépendances sur l'hôte"
+    if ! ./telecharger-paquets.sh; then
+      err "le téléchargement des paquets a échoué : vérifier l'accès aux dépôts"
+      err "l'image $IMAGE ne peut pas être construite sans ces paquets"
+      return 1
+    fi
+  fi
+
+  log "Construction de l'image $IMAGE"
+  if docker build -t "$IMAGE" . ; then
+    ok "image $IMAGE construite"
+  else
+    err "la construction de l'image $IMAGE a échoué"
+    return 1
+  fi
+}
+
 # ------------------------------------------------------------------- monter
 monter() {
   log "Arrêt d'une éventuelle précédente exécution"
@@ -1837,6 +1894,19 @@ monter() {
   # laboratoire, appartient à root et rendrait le dossier de travail inaccessible
   # à l'enquêteur : les livrables des LAB ne pourraient plus être écrits.
   docker volume rm -f flab-enquete >/dev/null 2>&1 || true
+
+  # L'image doit exister avant le premier « docker run ». Sans ce contrôle, Docker
+  # cherche l'image dans un registre public et échoue par « Unable to find image
+  # 'forensique-lab:2026' locally » : le formateur aurait alors à lancer
+  # « construire » à la main, ce que le cours ne demande pas. La construction
+  # automatique ne se déclenche que si l'image manque ; une image déjà construite
+  # est réutilisée telle quelle, sans reconstruction.
+  if image_presente; then
+    ok "image $IMAGE déjà présente"
+  else
+    log "image $IMAGE absente : construction automatique avant le montage"
+    construire
+  fi
 
   # Les réseaux sont créés avec un masque plus large que le segment utile et une
   # passerelle technique hors segment. Le réseau 10.10.0.0/23 englobe le segment
@@ -2875,7 +2945,7 @@ enquete() {
 # « relancer » est le remède non destructif : il rétablit les services d'un
 # laboratoire déjà monté sans toucher au volume, donc sans effacer les livrables.
 if [ $# -eq 0 ]; then
-  echo "Usage : $0 {monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2
+  echo "Usage : $0 {construire|monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2
   echo "Attention : « monter » recrée le volume du poste de l'enquêteur et" >&2
   echo "efface les livrables. Ne l'employez qu'avant le début de la séance." >&2
   echo "Pour réparer le laboratoire sans les effacer, employez « relancer »." >&2
@@ -2892,17 +2962,18 @@ if [ $# -eq 1 ] && [ "$1" = "enquete" ]; then
 fi
 
 case "$1" in
-  monter)    monter ;;
-  verifier)  verifier ;;
-  scenario)  scenario ;;
-  relancer)  relancer ;;
-  arrêter)   arrêter ;;
-  enquete)   shift; enquete "$@" ;;
-  *)         echo "Usage : $0 {monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2; exit 2 ;;
+  construire) construire ;;
+  monter)     monter ;;
+  verifier)   verifier ;;
+  scenario)   scenario ;;
+  relancer)   relancer ;;
+  arrêter)    arrêter ;;
+  enquete)    shift; enquete "$@" ;;
+  *)          echo "Usage : $0 {construire|monter|verifier|scenario|relancer|arrêter|enquete <commande>}" >&2; exit 2 ;;
 esac
 ```
 
-**Lecture commentée.** Ce fichier est le point d’entrée du laboratoire. Il offre six
+**Lecture commentée.** Ce fichier est le point d’entrée du laboratoire. Il offre sept
 sous-commandes et aucune valeur par défaut : appelé sans argument, il affiche son usage
 et se termine par un code de sortie 2. La raison est une règle de forensique : `monter`
 supprime le volume du poste de l’enquêteur, donc les livrables et les empreintes des
@@ -2922,7 +2993,11 @@ consulter, jamais fabriquer. Les livrables vont dans `~/enquete`, accessible en
 écriture. Cette distinction entre le dossier de travail et le dossier des journaux est
 ce que le chapitre sur le cadre de l’enquête enseigne comme conservation des preuves.
 
-**`monter`.** La sous-commande arrête une exécution précédente, recrée le volume, crée
+**`monter`.** La sous-commande arrête une exécution précédente, puis vérifie la présence
+de l’image du laboratoire. Si elle manque, elle la construit d’abord en appelant
+`construire` : c’est ce qui rend le premier montage possible sans commande préalable, et
+c’est aussi ce qui évite l’erreur `Unable to find image 'forensique-lab:2026' locally`
+que produirait un `docker run` sur une image absente. Elle recrée ensuite le volume, crée
 les deux réseaux, démarre les huit conteneurs, lance les services annoncés, démarre le
 scénario d’incident, puis attend que tout réponde. Les réseaux sont créés avec un masque
 plus large que le segment utile et une passerelle technique hors segment : sans cette
@@ -2980,8 +3055,11 @@ pas être refusé. Elle ne touche jamais le poste de l’enquêteur, ni le scén
 d’incident : celui-ci fait partie de la preuve. La réparation est ensuite contrôlée, et
 non supposée. Réparer un outil est légitime ; modifier une preuve ne l’est pas.
 
-**Les trois sous-commandes restantes.** `scenario` arrête une boucle déjà en cours avant
-d’en lancer une nouvelle, car deux tours superposés doubleraient le trafic et les
+**Les quatre sous-commandes restantes.** `construire` prépare l’image du laboratoire :
+elle télécharge au besoin les paquets `.deb` sur l’hôte, puis construit l’image
+`forensique-lab:2026`. Elle est appelée par `monter` lorsque l’image manque, et reste
+disponible seule pour reconstruire l’image. `scenario` arrête une boucle déjà en cours
+avant d’en lancer une nouvelle, car deux tours superposés doubleraient le trafic et les
 journaux. `arrêter` supprime les conteneurs et les réseaux, mais laisse le volume.
 `enquete` exécute une commande dans le poste de l’enquêteur, avec le dossier de travail
 déjà réglé.
