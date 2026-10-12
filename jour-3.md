@@ -6,13 +6,18 @@
 
 ### Avant la séance — montage du laboratoire
 
-Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00 :
+Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00. Il vérifie ensuite que tout est en place, sans rien détruire :
 
 ```bash
 lab/construire-lab.sh monter
+lab/construire-lab.sh verifier
 ```
 
-Cette commande recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
+Lors du tout premier lancement, l’image `forensique-lab:2026` n’existe pas encore. La sous-commande `monter` la construit alors automatiquement, après avoir téléchargé sur l’hôte les paquets `.deb` qui la composent : cette préparation demande un accès aux dépôts de la distribution et prend quelques minutes. Les lancements suivants réutilisent l’image déjà construite et démarrent immédiatement. La construction peut aussi être demandée seule, par `lab/construire-lab.sh construire`.
+
+> **Résultat attendu :** après `monter`, les deux réseaux et les huit conteneurs du laboratoire sont actifs, et le poste de l’enquêteur répond. Au tout premier lancement, la construction de l’image allonge la commande de quelques minutes, le temps de télécharger les paquets ; les lancements suivants rendent la main immédiatement. La sous-commande `verifier` contrôle ensuite la topologie, les journaux et les droits d’écriture : elle se termine par « Laboratoire conforme aux attentes des trois journées ». Tant que cette ligne n’est pas affichée, la séance ne commence pas.
+
+La sous-commande `monter` recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
 
 ## Objectifs du Jour
 
@@ -1238,7 +1243,7 @@ Le jour 3 clôt la chaîne des trois journées. Le chapitre 5 a transformé les 
 | `sha256sum ~/enquete/incident.pcap > ~/enquete/incident.pcap.sha256` | Scelle la capture d’incident par son empreinte. |
 | `sha256sum -c ~/enquete/incident.pcap.sha256` | Vérifie l’intégrité de la capture scellée. |
 | `cp ~/enquete/incident.pcap ~/enquete/copie-incident.pcap` | Crée une copie de travail distincte de la pièce originale. |
-| `printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ) enqueteur ouverture-capture incident.pcap" >> ~/enquete/journal-actions.txt` | Inscrit un geste dans le journal des gestes. |
+| `printf '%s \| %s \| %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "ouverture du journal des gestes" >> ~/enquete/journal-actions.txt` | Inscrit un geste dans le journal des gestes, en trois champs séparés par une barre verticale. |
 | `tshark -r ~/enquete/copie-incident.pcap -Y "ip.addr==10.10.0.30" -T fields -e frame.time -e ip.src -e ip.dst -e tcp.dstport 2>&1  \| head -5` | Isole, dans la copie de travail, les paquets qui concernent le serveur de fichiers, pour les confronter au journal. |
 | `jq -r 'select(.event_type=="alert" and .alert.signature_id==9000001) \| [.timestamp, .src_ip, .dest_ip, .dest_port] \| @tsv' ~/suricata/eve.json \| head -5` | Les alertes de la règle du balayage de ports, qui portent le vecteur d’intrusion, avec leur instant et leurs deux extrémités. |
 | `sha256sum ~/enquete/chronologie-incident.md > ~/enquete/chronologie-incident.md.sha256` | Scelle la chronologie rédigée au clavier. |

@@ -82,7 +82,7 @@ alert tcp any 23 -> any any (msg:"LABO Protocole en clair - session Telnet depui
 # SMB chiffre les échanges, mais la négociation initiale ne l'est pas : les
 # dialogues d'établissement voyagent en clair. La trame de négociation de SMB2
 # commence par la marque « FE 53 4D 42 », c'est-à-dire l'octet 0xFE suivi des
-# quatre lettres de SMB.
+# trois lettres de SMB.
 #
 # La recherche ne fixe ni position ni profondeur. Le contenu d'un flux SMB
 # commence par un en-tête NetBIOS de quatre octets, qui précède la marque : une

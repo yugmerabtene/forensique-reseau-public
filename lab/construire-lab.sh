@@ -38,10 +38,10 @@
 #      réseau du poste compromis, et non dans le collecteur. Ce n'est pas un
 #      détail d'implémentation : c'est la seule position d'observation possible
 #      ici. Un pont Docker ne livre le trafic unicast qu'au port destinataire, et
-#      n'honore pas le mode promiscuë : un conteneur du segment central ne voit
+#      n'honore pas le mode promiscuité : un conteneur du segment central ne voit
 #      jamais le trafic échangé entre deux autres machines de ce segment. C'est
 #      mesuré : trois tentatives de capture depuis le collecteur, dont deux en
-#      mode promiscuë forcé, n'ont enregistré aucun paquet, alors que le trafic
+#      mode promiscuité forcé, n'ont enregistré aucun paquet, alors que le trafic
 #      circulait. Partager l'espace réseau du poste suspect rend en revanche tout
 #      son trafic visible, ce qui suffit aux quatre comportements de l'incident,
 #      puisque tous en partent.
@@ -674,7 +674,7 @@ CONF
   # Cette version de rsyslog surveille les fichiers par notify : la lecture
   # intervient à l'écriture, et non au tour de sondage. Le délai mesuré sur ce
   # laboratoire est de l'ordre de centièmes de seconde, très en deçà du plafond.
-  # C'est donc l'horodatage des lignes reçues, au dixième de seconde près, qui
+  # C'est donc l'horodatage des lignes reçues, à la seconde près, qui
   # fixe la résolution d'une chronologie, et non le transport.
   demarrer_rsyslog_hote "$PREFIXE-app"
   demarrer_rsyslog_hote "$PREFIXE-passerelle"
@@ -757,7 +757,7 @@ verifier() {
     fi
   done
 
-  # 2. Découverte : cinq hôtes sur le site central, trois sur la filiale
+  # 2. Découverte : six hôtes sur le site central, quatre sur la filiale
  nb_hotes() {
     docker exec "$PREFIXE-enquete" nmap -sn -n "$1" 2>/dev/null \
       | grep -c "Nmap scan report" || true
@@ -771,10 +771,10 @@ verifier() {
     err "nmap -sn renvoie $central hôtes sur 10.10.0.0/24, moins que les 6 attendus"
     echecs=$((echecs+1))
   fi
-  if [ "$filiale" -ge 3 ]; then
+  if [ "$filiale" -ge 4 ]; then
     ok "nmap -sn renvoie $filiale hôtes sur 10.20.0.0/24"
   else
-    err "nmap -sn renvoie $filiale hôtes sur 10.20.0.0/24, moins que les 3 attendus"
+    err "nmap -sn renvoie $filiale hôtes sur 10.20.0.0/24, moins que les 4 attendus"
     echecs=$((echecs+1))
   fi
 
@@ -856,8 +856,8 @@ verifier() {
   #    Le contrôle ne se contente pas de lire le journal : il provoque d'abord
   #    l'incident qu'il veut vérifier. Exiger une alerte déjà présente rendrait le
   #    résultat dépendant de l'heure à laquelle la vérification est lancée, puisque
-  #    le scénario d'incident ne joue ses comportements que toutes les huit
-  #    minutes. Le contrôle déclenche donc un balayage bref depuis le poste
+  #    le scénario d'incident ne joue ses comportements qu'environ toutes les
+  #    neuf minutes. Le contrôle déclenche donc un balayage bref depuis le poste
   #    compromis, puis attend l'alerte. Le balayage est exactement celui du
   #    scénario : huit ports inhabituels suffisent à franchir le seuil de cinq
   #    segments SYN en trente secondes.

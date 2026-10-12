@@ -6,15 +6,18 @@
 
 ### Avant la séance — montage du laboratoire
 
-Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00 :
+Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00. Il vérifie ensuite que tout est en place, sans rien détruire :
 
 ```bash
 lab/construire-lab.sh monter
+lab/construire-lab.sh verifier
 ```
 
 Lors du tout premier lancement, l’image `forensique-lab:2026` n’existe pas encore. La sous-commande `monter` la construit alors automatiquement, après avoir téléchargé sur l’hôte les paquets `.deb` qui la composent : cette préparation demande un accès aux dépôts de la distribution et prend quelques minutes. Les lancements suivants réutilisent l’image déjà construite et démarrent immédiatement. La construction peut aussi être demandée seule, par `lab/construire-lab.sh construire`.
 
-Cette commande recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
+> **Résultat attendu :** après `monter`, les deux réseaux et les huit conteneurs du laboratoire sont actifs, et le poste de l’enquêteur répond. Au tout premier lancement, la construction de l’image allonge la commande de quelques minutes, le temps de télécharger les paquets ; les lancements suivants rendent la main immédiatement. La sous-commande `verifier` contrôle ensuite la topologie, les journaux et les droits d’écriture : elle se termine par « Laboratoire conforme aux attentes des trois journées ». Tant que cette ligne n’est pas affichée, la séance ne commence pas.
+
+La sous-commande `monter` recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
 
 ## Objectifs du Jour
 
@@ -365,8 +368,8 @@ Vérification du compte : `whoami` renvoie `enqueteur`, et `pwd` renvoie `/home/
 | Poste de l’enquêteur | `enqueteur`@10.10.0.10 et `enqueteur`@10.20.0.30 |
 | Interfaces du poste | `eth0` sur 10.10.0.0/24, `eth1` sur 10.20.0.0/24 |
 | Site central | 10.10.0.0/24 — passerelle 10.10.0.1 |
-| Serveur applicatif | 10.10.0.20 — ports 22, 80, 443 et 5201 |
-| Serveur de fichiers | 10.10.0.30 — ports 23, 139 et 445 ouverts, port 3389 fermé |
+| Serveur applicatif | 10.10.0.20 — ports 22, 80 et 443 ouverts, et 5201 pour le service de mesure de débit iperf3 |
+| Serveur de fichiers | 10.10.0.30 — port 23 en clair, ports 139 et 445 ouverts |
 | Collecteur de journaux | 10.10.0.50 — réception du syslog sur le port 514 en UDP |
 | Filiale | 10.20.0.0/24 — passerelle 10.20.0.1, serveur 10.20.0.20 |
 | Outils utilisés | `ip`, `tcpdump`, `tshark`, `nmap`, `capinfos`, `sha256sum`, `date`, `cut`, `nano` |
@@ -642,7 +645,7 @@ flowchart LR
 
 Ce que le schéma ne montre pas : le trafic échangé entre deux machines d’un même segment, qui ne traverse pas l’interface de l’enquêteur et qu’aucune capture prise sur cette interface ne pourra donc établir.
 
-Le trait en pointillé entre les deux segments n’est pas un lien : il rappelle au contraire qu’aucun dialogue ne s’établit entre les deux réseaux. Une passerelle, dans le laboratoire, sait router un paquet d’un segment à l’autre, et une demande peut donc franchir la frontière ; mais la réponse ne revient pas, faute de chemin de retour, et aucune session ne s’ouvre. Une commande du laboratoire ne peut donc faire établir aucune connexion entre 10.10.0.0/24 et 10.20.0.0/24. Ce qui est observable sur `eth0` ne l’est pas sur `eth1`, et la capture de référence devra être organisée en deux fichiers si l’enquête porte sur les deux segments.
+Le trait en pointillé entre les deux segments n’est pas un lien : il rappelle seulement que les deux réseaux coexistent. La passerelle ne relaie aucun trafic d’un segment vers l’autre : Docker isole le passage d’un pont à l’autre, et aucune demande ne franchit la frontière. Une commande du laboratoire ne peut donc établir aucune connexion entre 10.10.0.0/24 et 10.20.0.0/24. Ce qui est observable sur `eth0` ne l’est pas sur `eth1`, et la capture de référence devra être organisée en deux fichiers si l’enquête porte sur les deux segments.
 
 #### 2. Ce qu’est un paquet, et ce que ses éléments établissent (14min)
 
@@ -847,7 +850,7 @@ Une capture ne se remplit pas toute seule. Le compteur s’arrête au trois cent
 ```bash
 sudo tcpdump -i eth0 -w ~/enquete/capture-reference.pcap -s 0 -n -U -c 300 &
 sleep 2
-iperf3 -c 10.10.0.20 -t 8 -P 4 -l 1400 -b 10M
+iperf3 -c 10.10.0.20 -t 10 -P 4 -l 1400 -b 10M
 wait
 sudo chown enqueteur:enqueteur ~/enquete/capture-reference.pcap
 capinfos -c ~/enquete/capture-reference.pcap
@@ -999,8 +1002,8 @@ cat ~/enquete/journal-acquisition.txt
 | Poste de l’enquêteur | `enqueteur`@10.10.0.10 et `enqueteur`@10.20.0.30 |
 | Interfaces | `eth0` sur 10.10.0.0/24, `eth1` sur 10.20.0.0/24 |
 | Site central | 10.10.0.0/24 — passerelle 10.10.0.1 |
-| Serveur applicatif | 10.10.0.20 — ports 22, 80, 443 et 5201 |
-| Serveur de fichiers | 10.10.0.30 — ports 23 et 445 ouverts, port 3389 fermé. Le port 139 est lui aussi ouvert, et il apparaît déjà dans le sondage automatique des ports courants ; il manque à l’étape 5, dont la commande énumère les ports un à un au lieu de demander la liste des ports courants |
+| Serveur applicatif | 10.10.0.20 — ports 22, 80 et 443 ouverts, et 5201 pour le service de mesure de débit iperf3 |
+| Serveur de fichiers | 10.10.0.30 — port 23 en clair, ports 139 et 445 ouverts. Le port 139 apparaît aussi dans le sondage automatique des ports courants ; il manque à l’étape 5, dont la commande énumère les ports un à un au lieu de demander la liste des ports courants |
 | Collecteur de journaux | 10.10.0.50 — réception du syslog sur le port 514 en UDP |
 | Filiale | 10.20.0.0/24 — serveur 10.20.0.20, ports 22 et 80 ouverts |
 | Poste compromis | 10.20.0.10 sur la filiale, 10.10.0.60 sur le site central |
@@ -1254,7 +1257,7 @@ Cette journée a établi deux choses. Le chapitre 1 a écrit le cadre et les rè
 - `sha256sum fichier > fichier.sha256` — calcule l’empreinte du fichier et l’écrit sur disque.
 - `sha256sum -c fichier.sha256` — vérifie que le fichier n’a pas changé depuis son scellement.
 - `date -u +%Y-%m-%dT%H:%M:%SZ` — donne l’heure en temps universel, au format du laboratoire.
-- `cat > fichier.md <<'CADRE'` — écrit un document saisi à la clavier, sans interprétation des symboles.
+- `cat > fichier.md <<'CADRE'` — écrit un document saisi au clavier, sans interprétation des symboles.
 - `printf '%s | %s | %s | %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "enqueteur" "fichier.md" "$(cut -c1-64 fichier.md.sha256)" >> ~/enquete/journal-acquisition.txt` — ajoute au journal une ligne d’acquisition horodatée.
 
 #### Chapitre 2 — M2
@@ -1303,8 +1306,8 @@ Chaque lien ci-dessous a été ouvert et vérifié au jour de la rédaction du s
 | Guide d’emploi de Wireshark | https://www.wireshark.org/docs/wsdg_html_chunked/ |
 | Téléchargement de Wireshark | https://www.wireshark.org/download.html |
 | Code source de Wireshark | https://github.com/wireshark/wireshark |
-| Manuel de tcpdump sous Linux | https://man7.org/linux/man-pages/man8/tcpdump.8.html |
-| RFC 1157, format des messages de journal réseau | https://www.rfc-editor.org/rfc/rfc1157.html |
+| Manuel de tcpdump sous Linux | https://manpages.ubuntu.com/manpages/noble/en/man8/tcpdump.8.html |
+| RFC 3164, format des messages de journal réseau | https://www.rfc-editor.org/rfc/rfc3164.html |
 
 
 ## Annexe — Le code du laboratoire
@@ -1664,10 +1667,10 @@ Les sous-commandes utilisées pendant la formation sont `construire`, `monter`, 
 #      réseau du poste compromis, et non dans le collecteur. Ce n'est pas un
 #      détail d'implémentation : c'est la seule position d'observation possible
 #      ici. Un pont Docker ne livre le trafic unicast qu'au port destinataire, et
-#      n'honore pas le mode promiscuë : un conteneur du segment central ne voit
+#      n'honore pas le mode promiscuité : un conteneur du segment central ne voit
 #      jamais le trafic échangé entre deux autres machines de ce segment. C'est
 #      mesuré : trois tentatives de capture depuis le collecteur, dont deux en
-#      mode promiscuë forcé, n'ont enregistré aucun paquet, alors que le trafic
+#      mode promiscuité forcé, n'ont enregistré aucun paquet, alors que le trafic
 #      circulait. Partager l'espace réseau du poste suspect rend en revanche tout
 #      son trafic visible, ce qui suffit aux quatre comportements de l'incident,
 #      puisque tous en partent.
@@ -2300,7 +2303,7 @@ CONF
   # Cette version de rsyslog surveille les fichiers par notify : la lecture
   # intervient à l'écriture, et non au tour de sondage. Le délai mesuré sur ce
   # laboratoire est de l'ordre de centièmes de seconde, très en deçà du plafond.
-  # C'est donc l'horodatage des lignes reçues, au dixième de seconde près, qui
+  # C'est donc l'horodatage des lignes reçues, à la seconde près, qui
   # fixe la résolution d'une chronologie, et non le transport.
   demarrer_rsyslog_hote "$PREFIXE-app"
   demarrer_rsyslog_hote "$PREFIXE-passerelle"
@@ -2383,7 +2386,7 @@ verifier() {
     fi
   done
 
-  # 2. Découverte : cinq hôtes sur le site central, trois sur la filiale
+  # 2. Découverte : six hôtes sur le site central, quatre sur la filiale
  nb_hotes() {
     docker exec "$PREFIXE-enquete" nmap -sn -n "$1" 2>/dev/null \
       | grep -c "Nmap scan report" || true
@@ -2397,10 +2400,10 @@ verifier() {
     err "nmap -sn renvoie $central hôtes sur 10.10.0.0/24, moins que les 6 attendus"
     echecs=$((echecs+1))
   fi
-  if [ "$filiale" -ge 3 ]; then
+  if [ "$filiale" -ge 4 ]; then
     ok "nmap -sn renvoie $filiale hôtes sur 10.20.0.0/24"
   else
-    err "nmap -sn renvoie $filiale hôtes sur 10.20.0.0/24, moins que les 3 attendus"
+    err "nmap -sn renvoie $filiale hôtes sur 10.20.0.0/24, moins que les 4 attendus"
     echecs=$((echecs+1))
   fi
 
@@ -2482,8 +2485,8 @@ verifier() {
   #    Le contrôle ne se contente pas de lire le journal : il provoque d'abord
   #    l'incident qu'il veut vérifier. Exiger une alerte déjà présente rendrait le
   #    résultat dépendant de l'heure à laquelle la vérification est lancée, puisque
-  #    le scénario d'incident ne joue ses comportements que toutes les huit
-  #    minutes. Le contrôle déclenche donc un balayage bref depuis le poste
+  #    le scénario d'incident ne joue ses comportements qu'environ toutes les
+  #    neuf minutes. Le contrôle déclenche donc un balayage bref depuis le poste
   #    compromis, puis attend l'alerte. Le balayage est exactement celui du
   #    scénario : huit ports inhabituels suffisent à franchir le seuil de cinq
   #    segments SYN en trente secondes.
@@ -3024,7 +3027,7 @@ le trafic d’attaque observable depuis le site central, sans dépendre du relai
 deux segments. Enfin, le moteur de détection ne tourne pas dans le collecteur, mais dans
 un conteneur qui partage l’espace réseau du poste compromis, et c’est la seule position
 possible ici. Un pont Docker ne livre le trafic qu’au port destinataire et n’honore pas
-le mode promiscuë, donc un conteneur du site central ne voit jamais le trafic échangé
+le mode promiscuité, donc un conteneur du site central ne voit jamais le trafic échangé
 entre deux autres machines de ce segment : trois tentatives de capture depuis le
 collecteur n’ont enregistré aucun paquet alors que le trafic circulait. En partageant
 l’espace réseau du poste suspect, la sonde voit tout son trafic, ce qui suffit aux

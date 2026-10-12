@@ -67,7 +67,7 @@ Imaginez un enquêteur qui arrive sur les lieux d’un incident. Avant de photog
 
 La difficulté n’est pas le nombre de commandes. Une poignée de commandes bien comprises suffit à faire l’essentiel du travail de collecte. La difficulté est ailleurs : chaque commande rend une sortie, et cette sortie doit être interprétée sans être devinée. Savoir que `ls -la` affiche des permissions ne sert à rien tant qu’on ne sait pas décider, en lisant la ligne, qui peut lire le fichier et qui peut l’écrire.
 
-Ce chapitre parcourt dix familles de commandes, de l’identité au scellement. Chacune est présentée de la même façon : le problème qu’elle résout en langage courant, un tableau des commandes utiles, puis une ou deux commandes réellement exécutées dans le laboratoire. La figure 1 montre la place du shell dans cette chaîne : c’est de lui que partent toutes les pièces de l’atelier.
+Ce chapitre parcourt dix familles de commandes, de l’identité au scellement. Chacune est présentée de la même façon : le problème qu’elle résout en langage courant, un tableau des commandes utiles, puis une ou deux commandes réellement exécutées dans le laboratoire. Le shell tient le premier rôle de cette chaîne : c’est de lui que partent toutes les pièces de l’atelier.
 
 ### Le vocabulaire en clair
 
@@ -110,7 +110,7 @@ Ce chapitre parcourt dix familles de commandes, de l’identité au scellement. 
 | Transitions | 4 min |
 | Total | 60 min |
 
-Le schéma suivant se lit de gauche à droite : il part de l’enquêteur devant son clavier et va jusqu’à la pièce scellée rangée dans le répertoire d’entraînement.
+La figure 1 se lit de gauche à droite : elle part de l’enquêteur devant son clavier et va jusqu’à la pièce scellée rangée dans le répertoire d’entraînement.
 
 ```mermaid
 flowchart LR
@@ -232,6 +232,8 @@ Pour lire un fichier, l’outil dépend de la longueur. `cat` affiche tout, ce q
 head -n 3 ~/entrainement/notes.txt
 wc -l ~/entrainement/notes.txt
 ```
+
+Ce que cette sortie prouve : `head -n 3` rend les trois premières lignes du fichier, et `wc -l` en donne le nombre total de lignes. Ce qu’elle ne prouve pas : que le fichier est complet, ni qu’il est inaltéré. Un fichier tronqué et un fichier intact peuvent rendre le même compte ; seule une empreinte, à la famille 9, fige le contenu et permet de le comparer d’une session à l’autre.
 
 > **Bon à savoir — lire un journal vivant se fait avec `tail -f`.**
 >
@@ -665,6 +667,8 @@ sudo tcpdump -i eth0 -c 4 -n
 ```
 
 Le préfixe `sudo` est nécessaire, car ouvrir une interface en mode capture exige un privilège. L’option `-i eth0` choisit l’interface, `-c 4` arrête l’outil après quatre paquets, et `-n` interdit la résolution des noms.
+
+Ce que cette sortie prouve : l’outil a bien ouvert l’interface en écoute et a retenu quatre paquets, affichés sans résolution de noms. Ce qu’elle ne prouve pas : qu’aucun autre paquet n’a circulé pendant l’écoute, ni que ces quatre paquets représentent le trafic du segment. Le compteur `-c 4` arrête l’outil sur un nombre fixé à l’avance ; ce nombre est un choix de lecture, jamais une mesure de l’activité du réseau.
 
 #### 3. Les options essentielles (7 min)
 

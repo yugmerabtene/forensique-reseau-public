@@ -6,13 +6,18 @@
 
 ### Avant la séance — montage du laboratoire
 
-Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00 :
+Le laboratoire est un ensemble de machines isolées, que le formateur monte une seule fois, depuis la racine du projet, avant 9h00. Il vérifie ensuite que tout est en place, sans rien détruire :
 
 ```bash
 lab/construire-lab.sh monter
+lab/construire-lab.sh verifier
 ```
 
-Cette commande recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
+Lors du tout premier lancement, l’image `forensique-lab:2026` n’existe pas encore. La sous-commande `monter` la construit alors automatiquement, après avoir téléchargé sur l’hôte les paquets `.deb` qui la composent : cette préparation demande un accès aux dépôts de la distribution et prend quelques minutes. Les lancements suivants réutilisent l’image déjà construite et démarrent immédiatement. La construction peut aussi être demandée seule, par `lab/construire-lab.sh construire`.
+
+> **Résultat attendu :** après `monter`, les deux réseaux et les huit conteneurs du laboratoire sont actifs, et le poste de l’enquêteur répond. Au tout premier lancement, la construction de l’image allonge la commande de quelques minutes, le temps de télécharger les paquets ; les lancements suivants rendent la main immédiatement. La sous-commande `verifier` contrôle ensuite la topologie, les journaux et les droits d’écriture : elle se termine par « Laboratoire conforme aux attentes des trois journées ». Tant que cette ligne n’est pas affichée, la séance ne commence pas.
+
+La sous-commande `monter` recrée le volume du poste de l’enquêteur : elle efface les livrables déjà produits et les empreintes qui les scellent. Une fois la séance commencée, elle ne doit plus être exécutée. Chacun des deux LAB de la journée rappelle cette consigne et donne la commande qui vérifie l’état du laboratoire sans rien détruire.
 
 ## Objectifs du Jour
 
@@ -174,6 +179,8 @@ tcpdump -d -y EN10MB 'src host 10.10.0.10 and dst host 10.10.0.30 and tcp[tcpfla
 ```
 
 Chaque terme de cette ligne a un rôle. Le mot `src host` et le mot `dst host` désignent les deux extrémités du dialogue. Le mot `and` exige que les deux conditions soient vraies. L’expression `tcp[tcpflags]` désigne l’octet du segment TCP qui réunit les indicateurs. Le mot `tcp-syn` isole l’indicateur d’ouverture, et le mot `tcp-ack` isole l’indicateur d’acquittement. La fin de la ligne exige un segment qui porte le premier indicateur et pas le second, c’est-à-dire une demande d’ouverture.
+
+Ce que la sortie prouve : que le filtre est accepté par `tcpdump` et qu’il est traduit en un petit programme de filtrage, lisible jeton par jeton. Ce qu’elle ne prouve pas : que ce filtre isole réellement la bonne trace ; cette vérification se fait en le rejouant sur la capture, à l’étape 4 du LAB. Une faute de recopie fait échouer la compilation sur un message `syntax error` : ce message est le premier signe d’un filtre à corriger, et non la preuve qu’aucun balayage n’a eu lieu.
 
 La liste des ports sondés n’est pas arbitraire. Elle réunit les cinq ports de service que l’inventaire du jour 1 a déclarés ouverts sur le site central, 22, 23, 80, 443 et 445, et les dix autres ports que la règle de détection du chapitre 4 surveille parce qu’ils ne correspondent à aucun service déclaré de cet inventaire : 21, 25, 53, 110, 139, 143, 3306, 3389, 993 et 995. Le port 139 demande une précision : il est le port classique du partage de fichiers, et le fait de figurer dans la liste surveillée ne dit rien de son état sur la machine visée. Un inventaire honnête se lit toujours avec la commande qui l’a produit sous les yeux, et cette liste de quinze ports est celle que le LAB exécutera.
 
@@ -393,6 +400,8 @@ cat ~/enquete/inventaire-hotes.txt
 ```
 
 Un écart entre l’inventaire et la capture est un constat d’enquête, pas une erreur de l’outil. Le tableau de l’étape 10 en donne trois exemples : le port 23 est déclaré en clair et la capture montre une session interactive avec des identifiants en clair ; le port 3389 n’est pas déclaré et la tentative d’ouverture y reçoit un acquittement négatif, ce qui n’est pas une intrusion ; le port 445 est déclaré et la capture montre une négociation SMB suivie d’une liste de fichiers, ce qui reste à expliquer.
+
+Ce que la sortie prouve : les ports que chaque machine a accepté de déclarer au premier jour, et donc le point de comparaison de l’enquête. Ce qu’elle ne prouve pas : l’état présent du réseau. Un port absent de l’inventaire n’est pas nécessairement fermé, et un port présent n’est pas nécessairement en service ; l’inventaire dit ce qui a été déclaré, et seule la commande qui l’a produit, au premier jour, en donne la portée exacte.
 
 ### LAB — Mesurer, isoler et consigner les quatre anomalies du laboratoire (50min)
 
@@ -736,6 +745,8 @@ tcpdump -d -y EN10MB 'dst host 10.10.0.30 and src host 10.10.0.10 and tcp[tcpfla
 
 En une phrase, dire ce que ce changement apporte à l’enquêteur qui travaille sur la machine visée plutôt que sur la machine qui sonde.
 
+> **Résultat attendu :** le filtre recompilé est accepté et produit un programme de filtrage valide, équivalent à celui du filtre d’origine à l’ordre des deux conditions près. Un refus sur `syntax error` signale une faute de recopie, jamais un filtre impossible : la lecture de la machine visée reste donc possible, et c’est elle que l’exercice fait vérifier.
+
 **Exercice 3 — Séparer volume et débit (5min)**
 
 La capture d’anomalies contient près de quatre cents paquets ICMP ; la capture de référence contient trois cents paquets de plus d’un millier d’octets reçus en quelques centièmes de seconde. En quatre lignes, dire lequel des deux volumes est le plus grand, lequel des deux est le plus dangereux, et quelle mesure tranche entre les deux.
@@ -820,7 +831,7 @@ Trois limites doivent être posées avant de lire la moindre ligne.
 
 Trois sources sont accessibles à l’enquêteur, en lecture seule, sans copie ni export : le journal rassemblé `~/journal/journal-reseau.log`, le journal d’accès du serveur de fichiers `~/journal/journal-samba.log`, et le journal du moteur de détection `~/suricata/eve.json`. Le tableau d’environnement du LAB en donne les chemins exacts.
 
-Le journal rassemblé réunit les messages de plusieurs machines, et c’est le point sur lequel l’enquêteur doit être précis : ce n’est pas un fichier unique, c’est une réunion. Les messages que les hôtes envoient directement au collecteur y arrivent avec leur propre horodatage, inscrit au début du message. Un seul fichier est en revanche suivi par le relais : le journal d’accès du serveur de fichiers, dont les lignes portent l’étiquette `samba-fichiers`. Les messages que le poste compromis envoie lui-même arrivent donc eux aussi en message direct, sous l’étiquette `poste-compromis`, et leur propre horodatage y est fiable. Une ligne de message direct a cette forme :
+Le journal rassemblé réunit les messages de plusieurs machines, et c’est le point sur lequel l’enquêteur doit être précis : ce n’est pas un fichier unique, c’est une réunion. Les messages que les hôtes envoient directement au collecteur y arrivent avec leur propre horodatage, inscrit au début du message. Un seul fichier est en revanche suivi en continu par le collecteur : le journal d’accès du serveur de fichiers, dont les lignes portent l’étiquette `samba-fichiers`. Les messages que le poste compromis envoie lui-même arrivent donc eux aussi en message direct, sous l’étiquette `poste-compromis`, et leur propre horodatage y est fiable. Une ligne de message direct a cette forme :
 
 ```text
 2026-10-02T21:11:38+00:00 lab-compromis poste-compromis 2026-10-02T21:11:38Z tentative Telnet 1 vers 10.10.0.30:23
@@ -860,7 +871,7 @@ Trois lectures se dégagent de ces chiffres, et chacune est un réflexe d’enqu
 >
 > Le moteur de détection observe le poste compromis et lui seul : il ne voit que le trafic qui entre dans l’adresse 10.10.0.60 ou qui en sort. Une poignée d’alertes du flot de paquets porte pourtant l’adresse du poste de l’enquêteur, 10.10.0.10, et ces alertes ne peuvent pas être attribuées à l’intrus.
 >
-> Elles sont peu nombreuses, et leur nombre n’est pas prévisible : la reproduction du chapitre 3, jouée deux fois de suite, les a produites une fois et pas l’autre. La raison en est connue. Un pont Docker ne livre le trafic unicast qu’au port du destinataire, et il n’honore pas le mode promiscu : le trafic de l’enquêteur vers 10.10.0.30 et vers 10.10.0.20 n’atteint le moteur que par exception, au moment où la table de commutation du pont ne connaît plus l’adresse physique de la destination et diffuse la trame au lieu de l’aiguiller. Cette table expire après trente secondes d’inactivité vers la cible. Le moteur ne distingue donc pas l’intrus de celui qui l’étudie, et il ne voit l’enquêteur que par accident ; seul le recoupement avec le journal des acquisitions, qui date les gestes de l’enquêteur, permet de les séparer. Un dossier qui mélange les deux est un dossier faux, et l’erreur est celle de l’enquêteur, pas celle des données.
+> Elles sont peu nombreuses, et leur nombre n’est pas prévisible : la reproduction du chapitre 3, jouée deux fois de suite, les a produites une fois et pas l’autre. La raison en est connue. Un pont Docker ne livre le trafic unicast qu’au port du destinataire, et il n’honore pas le mode promiscuité : le trafic de l’enquêteur vers 10.10.0.30 et vers 10.10.0.20 n’atteint le moteur que par exception, au moment où la table de commutation du pont ne connaît plus l’adresse physique de la destination et diffuse la trame au lieu de l’aiguiller. Cette table expire après trente secondes d’inactivité vers la cible. Le moteur ne distingue donc pas l’intrus de celui qui l’étudie, et il ne voit l’enquêteur que par accident ; seul le recoupement avec le journal des acquisitions, qui date les gestes de l’enquêteur, permet de les séparer. Un dossier qui mélange les deux est un dossier faux, et l’erreur est celle de l’enquêteur, pas celle des données.
 
 Reste le vrai angle mort, et il n’est pas dans les règles. À chaque tour, le journal d’actions du poste compromis annonce un balayage vers le serveur de la filiale. Aucune alerte ne correspond, et aucune ne le pourra : le moteur de détection observe une seule interface, celle du site central, et le trafic échangé entre deux machines de la filiale ne passe jamais devant elle. Le détecteur ne manque pas cette activité parce qu’il est mal écrit : il ne la voit pas parce qu’il n’est pas là où elle se passe. C’est l’argument décisif en faveur des journaux : une source unique a un angle mort, et cet angle mort se déduit de la position de la source, non de la qualité de ses règles.
 
@@ -1430,7 +1441,7 @@ alert tcp any 23 -> any any (msg:"LABO Protocole en clair - session Telnet depui
 # SMB chiffre les échanges, mais la négociation initiale ne l'est pas : les
 # dialogues d'établissement voyagent en clair. La trame de négociation de SMB2
 # commence par la marque « FE 53 4D 42 », c'est-à-dire l'octet 0xFE suivi des
-# quatre lettres de SMB.
+# trois lettres de SMB.
 #
 # La recherche ne fixe ni position ni profondeur. Le contenu d'un flux SMB
 # commence par un en-tête NetBIOS de quatre octets, qui précède la marque : une

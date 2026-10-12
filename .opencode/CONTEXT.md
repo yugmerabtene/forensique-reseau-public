@@ -86,7 +86,7 @@ produits les deux premiers jours. Cette chaîne est la structure même du cours.
 
 | Jour | Chapitre | Livrable produit | Consommé par |
 |------|----------|------------------|--------------|
-| J1 | C1 — M1 | `~/enquete/cadre-enquete.md` : périmètre, types de données, chaîne de conservation | C2, quicapture sur ce périmètre |
+| J1 | C1 — M1 | `~/enquete/cadre-enquete.md` : périmètre, types de données, chaîne de conservation | C2, qui capture sur ce périmètre |
 | J1 | C2 — M2 | `~/enquete/capture-reference.pcap` : capture de référence horodatée | C3 et C4, qui la relisent |
 | J1 | C2 — M2 | `~/enquete/inventaire-hotes.txt` : hôtes, ports et protocoles observés | C3, base du repérage des anomalies |
 | J2 | C3 — M3 | `~/enquete/anomalies.md` : anomalies constatées et filtre qui les prouve | C4 et C5 |
@@ -121,7 +121,7 @@ reconnaître les mêmes machines d'un chapitre à l'autre.
 
 Les deux segments sont distincts et non chevauchants, et appartiennent à l'espace
 d'adressage privé. Aucune donnée réelle du client DGFIP ne figure dans un support :
-un réseau dEssai suffit à rendre chaque notion démontrable.
+un réseau d'essai suffit à rendre chaque notion démontrable.
 
 **Outils annoncés et outillage du laboratoire**
 
@@ -139,7 +139,7 @@ un réseau dEssai suffit à rendre chaque notion démontrable.
 
 Zeek et Splunk ne sont pas dans les dépôts de distribution et ne peuvent donc pas
 être installés hors ligne. Ils sont traités en **outils optionnels** : le support
-annonce leur rôle, donne la procédure d'installation et fournit une repli exécutable
+annonce leur rôle, donne la procédure d'installation et fournit un repli exécutable
 dans l'image — les journaux EVE de Suricata au format JSON — pour qu'aucune étape
 ne dépende d'un outil absent. Le support signale toujours la dépendance et la
 repli, comme l'impose la règle 4 des règles de détail du cours.
@@ -287,7 +287,7 @@ rétrogradée d'un niveau sortirait du chapitre au rendu.]
 [Code complet de chaque fichier de `lab/`, reproduit verbatim, precede de son rôle
 et suivi d'une lecture commentée. Jour 1 : `telecharger-paquets.sh`, `Dockerfile`,
 `construire-lab.sh`. Jour 2 : `regles-detection.rules`, `scenario-incident.sh`.
-Jour 3 : renvoi motive vers les deux premieres annexes, pour ne pas dupliquer le
+Jour 3 : renvoi motivé vers les deux premières annexes, pour ne pas dupliquer le
 code. Le code reproduit ne doit jamais etre corrige dans le support : il est
 compare octet pour octet au fichier reel.]
 ```
